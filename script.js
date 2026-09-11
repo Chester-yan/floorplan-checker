@@ -914,45 +914,61 @@ function onFloorPlanUpload(input) {
   }
 }
 
-// 匯出當前系統所有設定與評估資料為 JSON 字串並自動複製
+// 匯出當前系統所有設定與評估資料為 JSON 字串
 function exportCurrentJSON() {
-  const projectName = document.getElementById("iptProjectName") ? document.getElementById("iptProjectName").value.trim() : "";
-  const unitNumber = document.getElementById("iptUnitNumber") ? document.getElementById("iptUnitNumber").value.trim() : "";
-  const selBedrooms = document.getElementById("selBedrooms") ? document.getElementById("selBedrooms").value : "2";
-  const conclusion = document.getElementById("iptConclusion") ? document.getElementById("iptConclusion").value.trim() : "";
+  try {
+    const projectName = document.getElementById("iptProjectName") ? document.getElementById("iptProjectName").value.trim() : "";
+    const unitNumber = document.getElementById("iptUnitNumber") ? document.getElementById("iptUnitNumber").value.trim() : "";
+    const selBedrooms = document.getElementById("selBedrooms") ? document.getElementById("selBedrooms").value : "2";
+    const conclusion = document.getElementById("iptConclusion") ? document.getElementById("iptConclusion").value.trim() : "";
 
-  // 1. 抓取被使用者手動關閉（未設置）的空間 ID
-  const disabledSpaces = spaces
-    .filter(sp => sp.userActive === false)
-    .map(sp => sp.id);
+    // 1. 抓取被手動關閉（未設置）的空間 ID
+    const disabledSpaces = spaces
+      .filter(sp => sp.userActive === false)
+      .map(sp => sp.id);
 
-  // 2. 抓取所有空間各題目的當前選取值 (索引陣列)
-  const selections = {};
-  spaces.forEach(sp => {
-    selections[sp.id] = sp.criteria.map(crit => crit.d);
-  });
-
-  // 3. 組合成標準資料包
-  const exportData = {
-    projectName: projectName,
-    unitNumber: unitNumber,
-    roomType: selBedrooms,
-    disabledSpaces: disabledSpaces,
-    conclusion: conclusion,
-    selections: selections
-  };
-
-  const jsonString = JSON.stringify(exportData, null, 2);
-
-  // 4. 自動複製至剪貼簿並彈窗提示
-  if (navigator.clipboard && window.isSecureContext) {
-    navigator.clipboard.writeText(jsonString).then(() => {
-      alert("✅ 已成功複製當前評估 JSON 代碼！\n下次重新整理頁面後，點擊「⚡ 匯入 AI 檢核數據」直接貼上即可還原。");
-    }).catch(err => {
-      promptFallback(jsonString);
+    // 2. 抓取所有空間當前的選取值
+    const selections = {};
+    spaces.forEach(sp => {
+      selections[sp.id] = sp.criteria.map(crit => crit.d);
     });
-  } else {
-    promptFallback(jsonString);
+
+    // 3. 組成標準資料包
+    const exportData = {
+      projectName: projectName,
+      unitNumber: unitNumber,
+      roomType: selBedrooms,
+      disabledSpaces: disabledSpaces,
+      conclusion: conclusion,
+      selections: selections
+    };
+
+    const jsonString = JSON.stringify(exportData, null, 2);
+
+    // 4. 開啟彈窗並把內容填入，方便直接查看或手動複製
+    const modal = document.getElementById("aiModal");
+    const textarea = document.getElementById("iptAiJson");
+    if (modal && textarea) {
+      textarea.value = jsonString;
+      modal.style.display = "flex";
+      textarea.focus();
+      textarea.select();
+    }
+
+    // 5. 同時嘗試自動寫入剪貼簿
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(jsonString).then(() => {
+        alert("✅ 當前評估 JSON 代碼已自動複製至剪貼簿！\n彈出視窗內亦保留完整代碼供備份。");
+      }).catch(() => {
+        alert("已為您產生評估代碼！請直接在框中按 Ctrl+C 複製。");
+      });
+    } else {
+      alert("已為您產生評估代碼！請直接在框中按 Ctrl+C 複製。");
+    }
+
+  } catch (err) {
+    console.error("匯出失敗：", err);
+    alert("匯出發生錯誤：" + err.message);
   }
 }
 
