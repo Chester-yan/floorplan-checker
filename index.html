@@ -93,21 +93,35 @@
     </div>
   </header>
   <!-- 第三區塊：家配平面圖卡片 (預設顯示空白提示框，點擊可直接上傳) -->
-  <div id="planCard" class="space-card" style="padding: 16px; margin-bottom: 16px; text-align: center;">
-    <div style="width: 100%; font-weight: 700; color: var(--primary); font-size: 1.05rem; margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 8px; text-align: left;">
-    家配平面圖
+  <div class="card" id="planCard">
+  <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+    <h3 style="margin: 0; font-size: 1.1rem; color: #1e3a8a;">家配平面圖</h3>
+    <!-- 圖片控制按鈕區（預設隱藏，有圖片時顯示） -->
+    <div id="planImgActions" style="display: none; gap: 8px;">
+      <button type="button" class="btn-sm" onclick="triggerReupload()" style="padding: 4px 10px; font-size: 0.8rem; background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; border-radius: 6px; cursor: pointer; font-weight: 600;">
+        🔄 更換圖片
+      </button>
+      <button type="button" class="btn-sm" onclick="removeFloorPlan()" style="padding: 4px 10px; font-size: 0.8rem; background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; border-radius: 6px; cursor: pointer; font-weight: 600;">
+        🗑️ 移除圖片
+      </button>
+    </div>
+  </div>
+
+  <div class="plan-wrapper" style="position: relative; margin-top: 12px; min-height: 220px; display: flex; align-items: center; justify-content: center; border: 2px dashed #cbd5e1; border-radius: 8px; background: #f8fafc; overflow: hidden;">
+    <!-- 隱藏的檔案輸入框 -->
+    <input type="file" id="iptFloorPlan" accept="image/*" onchange="onFloorPlanUpload(this)" style="display: none;">
+
+    <!-- 未上傳時的點擊提示框 -->
+    <div id="planPlaceholder" onclick="triggerReupload()" style="cursor: pointer; text-align: center; padding: 30px 20px;">
+      <div style="font-size: 2rem; margin-bottom: 8px;">🖼️</div>
+      <div style="font-weight: 700; color: #475569; font-size: 0.95rem;">點擊上傳家配平面圖</div>
+      <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 4px;">支援 JPG、PNG 格式</div>
     </div>
 
-    <!-- 未上傳時的空白佔位提示框 (點擊觸發檔案選擇器) -->
-  <div id="planPlaceholder" onclick="document.getElementById('iptFloorPlan').click()" style="border: 2px dashed #cbd5e1; border-radius: 8px; padding: 36px 16px; background: #f8fafc; cursor: pointer; transition: all 0.2s;">
-    <div style="font-size: 2rem; margin-bottom: 6px;">📷</div>
-    <div style="font-weight: 600; color: #475569; font-size: 0.95rem;">尚未上傳家配圖</div>
-    <div style="color: #94a3b8; font-size: 0.8rem; margin-top: 4px;">點擊此處選擇平面圖檔</div>
+    <!-- 上傳後的圖片顯示區 -->
+    <img id="imgFloorPlan" src="" alt="家配圖" style="display: none; width: 100%; max-height: 520px; object-fit: contain; cursor: pointer;" onclick="triggerReupload()" title="點擊可更換圖片">
   </div>
-
-    <!-- 上傳後顯示的實體圖片 (預設隱藏) -->
-    <img id="imgFloorPlan" src="" alt="家配平面圖" style="width: 100%; max-height: 480px; object-fit: contain; border-radius: 8px; display: none; margin: 0 auto;">
-  </div>
+</div>
 
   <!-- 第四區塊：空間機能指標雷達圖 -->
   <div id="radarChartCard" class="space-card" style="padding: 16px; margin-bottom: 16px; display: flex; flex-direction: column; align-items: center;">
