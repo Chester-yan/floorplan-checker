@@ -895,19 +895,24 @@ function toggleSpaceActive(spaceId, isActive) {
   calculateAll();
 }
 
-// 家配圖上傳預覽
+// 家配圖上傳與預覽
 function onFloorPlanUpload(input) {
   if (input.files && input.files[0]) {
     const reader = new FileReader();
     reader.onload = function (e) {
       const img = document.getElementById("imgFloorPlan");
       const placeholder = document.getElementById("planPlaceholder");
+      const actions = document.getElementById("planImgActions");
+
       if (img) {
         img.src = e.target.result;
-        img.style.display = "block"; // 顯示圖片
+        img.style.display = "block";
       }
       if (placeholder) {
-        placeholder.style.display = "none"; // 隱藏空白提示框
+        placeholder.style.display = "none";
+      }
+      if (actions) {
+        actions.style.display = "flex";
       }
     };
     reader.readAsDataURL(input.files[0]);
@@ -985,22 +990,61 @@ function promptFallback(text) {
   }
 }
 
+// 觸發重新選擇檔案
+function triggerReupload() {
+  const ipt = document.getElementById("iptFloorPlan");
+  if (ipt) {
+    ipt.value = ""; // 清空 value，避免選同一張圖片時不觸發 onchange
+    ipt.click();
+  }
+}
 
-// 全域相容與功能掛載
-window.exportCurrentJSON = exportCurrentJSON;
-window.closeAiModal = closeAiModal;
-window.confirmImportFromAI = confirmImportFromAI;
-window.onFloorPlanUpload = onFloorPlanUpload;
-window.toggleSpaceActive = toggleSpaceActive;
-window.importFromAI = importFromAI;
-window.copyReport = exportReportPDF;
-window.exportReportPDF = exportReportPDF;
-window.updateSpecTitle = updateSpecTitle;
-window.updateRadarChart = updateRadarChart; // 補上雷達圖更新函式
-window.resetToDefault = resetToDefault;
-window.onSuiteCountChange = onSuiteCountChange;
-window.applyExtremePreset = applyExtremePreset;
-window.togglePlusOne = togglePlusOne;
-window.setPreset = setPreset;
-window.renderSpaces = renderSpaces;
-window.onload = renderSpaces;
+// 移除當前圖片並還原上傳提示框
+function removeFloorPlan() {
+  const img = document.getElementById("imgFloorPlan");
+  const placeholder = document.getElementById("planPlaceholder");
+  const ipt = document.getElementById("iptFloorPlan");
+  const actions = document.getElementById("planImgActions");
+
+  if (img) {
+    img.src = "";
+    img.style.display = "none";
+  }
+  if (placeholder) placeholder.style.display = "block";
+  if (ipt) ipt.value = "";
+  if (actions) actions.style.display = "none";
+}
+
+
+// 全域相容與功能掛載（供 HTML 行內事件 onclick / onchange 調用）
+
+// 家配圖控制
+window.triggerReupload = triggerReupload;         // 觸發重新選擇圖片（清空檔案快取並喚起選檔視窗）
+window.removeFloorPlan = removeFloorPlan;         // 移除當前家配圖並還原上傳提示框
+window.onFloorPlanUpload = onFloorPlanUpload;     // 讀取上傳的圖片檔並即時預覽顯示
+
+// AI 數據匯入與狀態 JSON 匯出
+window.importFromAI = importFromAI;               // 開啟「匯入 AI 檢核數據」彈窗
+window.closeAiModal = closeAiModal;               // 關閉 AI 匯入彈窗
+window.confirmImportFromAI = confirmImportFromAI; // 解析貼上的 JSON 數據並自動套用至全系統
+window.exportCurrentJSON = exportCurrentJSON;     // 匯出當前所有微調後的評估數據為 JSON 並複製到剪貼簿
+
+// 空間與評分連動
+window.toggleSpaceActive = toggleSpaceActive;     // 切換單一空間的啟用/未留設狀態（影響計分母體與選單開關）
+window.applyExtremePreset = applyExtremePreset;   // 一鍵將所有空間選單設為滿分（max）或低標（min）
+window.updateRadarChart = updateRadarChart;       // 即時重繪空間機能指標雷達圖
+
+// 房型與套浴規格設定
+window.setPreset = setPreset;                     // 點擊頂部 1/2/3/4 房按鈕切換房型預設
+window.togglePlusOne = togglePlusOne;             // 切換「+1 房」開關並連動更新規格與卡片
+window.onSuiteCountChange = onSuiteCountChange;   // 切換「套房數量」下拉選單並依序指派套浴
+window.updateSpecTitle = updateSpecTitle;         // 即時組合格局規格字串並更新網頁標題（供 PDF 預設存檔檔名）
+
+// 報表匯出與重設
+window.copyReport = exportReportPDF;              // 匯出報表別名（向下相容用）
+window.exportReportPDF = exportReportPDF;         // 整合評估數據、家配圖與結論，調用瀏覽器輸出 A4 PDF
+window.resetToDefault = resetToDefault;           // 一鍵清空輸入與圖面，重設回預設 2 房狀態
+
+// 頁面初始化
+window.renderSpaces = renderSpaces;               // 動態生成各空間評估卡片與下拉選單的 DOM 結構
+window.onload = renderSpaces;                     // 網頁加載完成時自動執行首次渲染
