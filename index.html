@@ -12,9 +12,6 @@
 
 <div class="container">
   <header>
-    <!-- 隱藏的實體上傳 Input，由下方家配圖虛線框點擊觸發 -->
-    <input type="file" id="iptFloorPlan" accept="image/*" style="display:none;" onchange="onFloorPlanUpload(this)">
-
     <!-- 置中標題與滿版底線 -->
     <h1 style="text-align: center; margin-bottom: 16px; padding-bottom: 14px; border-bottom: 2px solid var(--primary);">
       住宅房型檢核系統
@@ -37,7 +34,7 @@
         <span style="color: #cbd5e1;">|</span>
 
         <!-- 房型按鈕群 -->
-        <label>動態房型套用：</label>
+        <label>房型：</label>
         <div class="btn-group">
           <button type="button" class="type-btn" onclick="setPreset('1')">1房</button>
           <button type="button" class="type-btn active" onclick="setPreset('2')">2房</button>
@@ -51,7 +48,7 @@
           <span>＋1房</span>
         </label>
 
-        <!-- 套房數量選擇器 (移至同一行) -->
+        <!-- 套房數量選擇器 -->
         <label style="font-weight: 600; font-size: 0.9rem; color: #1e293b; display: inline-flex; align-items: center; gap: 6px; margin-left: 4px;">
           <span>套房數量：</span>
           <select id="selSuiteCount" onchange="onSuiteCountChange(parseInt(this.value))" style="padding: 4px 8px; border-radius: 6px; border: 1px solid #cbd5e1; font-weight: 600; color: var(--primary);">
@@ -92,36 +89,34 @@
       </button>
     </div>
   </header>
-  <!-- 第三區塊：家配平面圖卡片 (預設顯示空白提示框，點擊可直接上傳) -->
-  <div class="card" id="planCard">
-  <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-    <h3 style="margin: 0; font-size: 1.1rem; color: #1e3a8a;">家配平面圖</h3>
-    <!-- 圖片控制按鈕區（預設隱藏，有圖片時顯示） -->
-    <div id="planImgActions" style="display: none; gap: 8px;">
-      <button type="button" class="btn-sm" onclick="triggerReupload()" style="padding: 4px 10px; font-size: 0.8rem; background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; border-radius: 6px; cursor: pointer; font-weight: 600;">
-        🔄 更換圖片
-      </button>
-      <button type="button" class="btn-sm" onclick="removeFloorPlan()" style="padding: 4px 10px; font-size: 0.8rem; background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; border-radius: 6px; cursor: pointer; font-weight: 600;">
-        🗑️ 移除圖片
-      </button>
-    </div>
-  </div>
 
-  <div class="plan-wrapper" style="position: relative; margin-top: 12px; min-height: 220px; display: flex; align-items: center; justify-content: center; border: 2px dashed #cbd5e1; border-radius: 8px; background: #f8fafc; overflow: hidden;">
-    <!-- 隱藏的檔案輸入框 -->
-    <input type="file" id="iptFloorPlan" accept="image/*" onchange="onFloorPlanUpload(this)" style="display: none;">
-
-    <!-- 未上傳時的點擊提示框 -->
-    <div id="planPlaceholder" onclick="triggerReupload()" style="cursor: pointer; text-align: center; padding: 30px 20px;">
-      <div style="font-size: 2rem; margin-bottom: 8px;">🖼️</div>
-      <div style="font-weight: 700; color: #475569; font-size: 0.95rem;">點擊上傳家配平面圖</div>
-      <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 4px;">支援 JPG、PNG 格式</div>
+  <!-- 第三區塊：家配平面圖卡片 (操作按鈕採用行內彈性容器保護，避免被外層 CSS 遮蔽) -->
+  <div class="card" id="planCard" style="position: relative;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 8px;">
+      <h3 style="margin: 0; font-size: 1.1rem; color: #1e3a8a; font-weight: 700;">家配平面圖</h3>
+      <!-- 圖片控制按鈕區（有圖片時顯示） -->
+      <div id="planImgActions" style="display: none; gap: 8px; z-index: 10;">
+        <button type="button" onclick="triggerReupload()" style="display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; font-size: 0.85rem; background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; border-radius: 6px; cursor: pointer; font-weight: 700;">
+          🔄 更換圖片
+        </button>
+        <button type="button" onclick="removeFloorPlan()" style="display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; font-size: 0.85rem; background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; border-radius: 6px; cursor: pointer; font-weight: 700;">
+          🗑️ 移除圖片
+        </button>
+      </div>
     </div>
 
-    <!-- 上傳後的圖片顯示區 -->
-    <img id="imgFloorPlan" src="" alt="家配圖" style="display: none; width: 100%; max-height: 520px; object-fit: contain; cursor: pointer;" onclick="triggerReupload()" title="點擊可更換圖片">
+    <div class="plan-wrapper" style="position: relative; min-height: 240px; display: flex; align-items: center; justify-content: center; border: 2px dashed #cbd5e1; border-radius: 8px; background: #f8fafc; overflow: hidden;">
+      <!-- 未上傳時的點擊提示框 -->
+      <div id="planPlaceholder" onclick="triggerReupload()" style="cursor: pointer; text-align: center; padding: 30px 20px; width: 100%;">
+        <div style="font-size: 2.2rem; margin-bottom: 8px;">🖼️</div>
+        <div style="font-weight: 700; color: #475569; font-size: 1rem;">點擊上傳家配平面圖</div>
+        <div style="font-size: 0.85rem; color: #94a3b8; margin-top: 4px;">支援 JPG、PNG 格式</div>
+      </div>
+
+      <!-- 上傳後的圖片顯示區 -->
+      <img id="imgFloorPlan" src="" alt="家配圖" style="display: none; width: 100%; max-height: 520px; object-fit: contain; cursor: pointer;" onclick="triggerReupload()" title="點擊可更換圖片">
+    </div>
   </div>
-</div>
 
   <!-- 第四區塊：空間機能指標雷達圖 -->
   <div id="radarChartCard" class="space-card" style="padding: 16px; margin-bottom: 16px; display: flex; flex-direction: column; align-items: center;">
@@ -172,21 +167,23 @@
     <button class="btn-action" onclick="exportReportPDF()">輸出評估結果 PDF</button>
   </div>
 </div>
-<script src="script.js"></script>
-  <!-- 自訂 AI 匯入彈出視窗 (Modal) -->
-  <div id="aiModal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 9999; align-items: center; justify-content: center; padding: 16px;">
-    <div style="background: white; border-radius: 12px; max-width: 600px; width: 100%; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2);">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-        <h3 style="color: var(--primary); font-size: 1.15rem; font-weight: 700;">⚡ 貼上 AI 檢核數據代碼</h3>
-        <button type="button" onclick="closeAiModal()" style="background: none; border: none; font-size: 1.4rem; cursor: pointer; color: #64748b;">✕</button>
-      </div>
-      <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 10px;">請將 AI 產出的評估代碼（可整段多行直接貼上）複製於下方：</p>
-      <textarea id="iptAiJson" placeholder='貼上例如：{"projectName":"緻信義", ...}' style="width: 100%; height: 180px; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: monospace; font-size: 0.85rem; resize: vertical; margin-bottom: 16px; outline: none;"></textarea>
-      <div style="display: flex; justify-content: flex-end; gap: 10px;">
-        <button type="button" onclick="closeAiModal()" style="padding: 8px 16px; border: 1px solid #cbd5e1; background: white; border-radius: 6px; cursor: pointer; font-weight: 600; color: #475569;">取消</button>
-        <button type="button" onclick="confirmImportFromAI()" style="padding: 8px 18px; background: var(--primary); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">確認載入</button>
-      </div>
+
+<!-- 自訂 AI 匯入彈出視窗 (Modal) -->
+<div id="aiModal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 9999; align-items: center; justify-content: center; padding: 16px;">
+  <div style="background: white; border-radius: 12px; max-width: 600px; width: 100%; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+      <h3 style="color: var(--primary); font-size: 1.15rem; font-weight: 700;">⚡ 貼上 AI 檢核數據代碼</h3>
+      <button type="button" onclick="closeAiModal()" style="background: none; border: none; font-size: 1.4rem; cursor: pointer; color: #64748b;">✕</button>
+    </div>
+    <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 10px;">請將 AI 產出的評估代碼（可整段多行直接貼上）複製於下方：</p>
+    <textarea id="iptAiJson" placeholder='貼上例如：{"projectName":"緻信義", ...}' style="width: 100%; height: 180px; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: monospace; font-size: 0.85rem; resize: vertical; margin-bottom: 16px; outline: none;"></textarea>
+    <div style="display: flex; justify-content: flex-end; gap: 10px;">
+      <button type="button" onclick="closeAiModal()" style="padding: 8px 16px; border: 1px solid #cbd5e1; background: white; border-radius: 6px; cursor: pointer; font-weight: 600; color: #475569;">取消</button>
+      <button type="button" onclick="confirmImportFromAI()" style="padding: 8px 18px; background: var(--primary); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">確認載入</button>
     </div>
   </div>
+</div>
+
+<script src="script.js"></script>
 </body>
 </html>
