@@ -1,0 +1,226 @@
+:root {
+  --primary: #1e3a8a;
+  --border: #e2e8f0;
+  --text: #1e293b;
+  --text-muted: #64748b;
+  --danger: #ef4444;
+  --danger-bg: #fee2e2;
+  --success: #10b981;
+}
+* { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang TC", "Microsoft JhengHei", sans-serif; margin: 0; padding: 0; }
+body { background-color: #f8fafc; color: var(--text); padding-bottom: 120px; }
+.container { max-width: 1000px; margin: 0 auto; padding: 24px 16px; }
+
+header { background: white; border-radius: 12px; padding: 20px 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 20px; }
+h1 { font-size: 1.5rem; color: var(--primary); margin-bottom: 8px; }
+p.subtitle { color: var(--text-muted); font-size: 0.9rem; }
+
+.type-selector { display: flex; gap: 12px; margin-top: 16px; flex-wrap: wrap; align-items: center; }
+.type-selector label { font-size: 0.95rem; font-weight: 600; color: #334155; }
+.btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
+.type-btn { background: white; border: 1px solid #cbd5e1; padding: 8px 18px; border-radius: 8px; cursor: pointer; font-size: 0.9rem; transition: all 0.2s; }
+.type-btn:hover { border-color: var(--primary); }
+.type-btn.active { background: var(--primary); color: white; border-color: var(--primary); font-weight: 600; }
+
+.space-card { background: white; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 16px; overflow: hidden; transition: all 0.2s; }
+.space-card.hidden { display: none; }
+.space-card.is-suite-bath { border-left: 5px solid #3b82f6; }
+
+.space-header { padding: 14px 20px; background: #f8fafc; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+.space-title { display: flex; align-items: center; gap: 12px; font-weight: 600; font-size: 1.05rem; }
+.badge { font-size: 0.75rem; background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 999px; font-weight: 500; }
+.space-scores { display: flex; gap: 16px; font-size: 0.85rem; color: var(--text-muted); }
+.space-scores b { color: var(--text); }
+
+.criteria-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; padding: 20px; }
+.crit-group { display: flex; flex-direction: column; gap: 6px; }
+.crit-label { font-size: 0.85rem; font-weight: 500; color: #475569; }
+.crit-select { padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; background: white; outline: none; transition: border-color 0.2s; }
+.crit-select:focus { border-color: var(--primary); }
+.crit-select.not-ok { border-color: var(--danger); background: var(--danger-bg); color: #991b1b; font-weight: 600; }
+
+.sticky-footer { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid var(--border); box-shadow: 0 -4px 16px rgba(0,0,0,0.08); padding: 16px 24px; z-index: 100; }
+.footer-inner { max-width: 1000px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
+.score-summary { display: flex; gap: 24px; align-items: center; }
+.score-item { display: flex; flex-direction: column; }
+.score-item .label { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 2px; }
+.score-item .val { font-size: 1.25rem; font-weight: 700; color: #1e293b; }
+
+.final-score-box { display: flex; align-items: baseline; gap: 6px; }
+.final-score { font-size: 2rem; font-weight: 800; color: var(--primary); line-height: 1; }
+.final-unit { font-size: 0.9rem; color: var(--text-muted); font-weight: 600; }
+
+.btn-action { background: #0f172a; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+.btn-action:hover { background: #334155; }
+
+/* 列印與另存 PDF 專用樣式 */
+@page {
+  size: A4;
+  margin: 12mm 10mm;
+}
+
+@media print {
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  body {
+    background: white !important;
+    padding: 0 !important;
+  }
+
+  /* 隱藏網頁操作按鈕與底部浮動列 */
+  .type-selector,
+  .sticky-footer,
+  .btn-action {
+    display: none !important;
+  }
+
+  /* 第一區塊：系統標題置中且緊湊 */
+  header {
+    box-shadow: none !important;
+    border-bottom: none !important; 
+    border-radius: 0 !important;
+    padding: 0 !important;
+    margin-bottom: 12px !important;
+    text-align: center !important;
+  }
+  header h1 {
+    text-align: center !important;
+    font-size: 1.5rem !important;
+    margin-bottom: 0 !important;
+    padding-bottom: 8px !important;
+    border-bottom: 2px solid var(--primary) !important;
+  }
+
+  /* 第二區塊：摘要卡片 */
+  .print-summary-box {
+    display: flex !important;
+    justify-content: space-between;
+    align-items: center;
+    background: #f8fafc !important;
+    border: 1px solid #cbd5e1 !important;
+    padding: 8px 16px !important;
+    border-radius: 8px !important;
+    margin-bottom: 10px !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* 第三區塊：家配圖適應 A4 空間高度 */
+  #planCard {
+    box-shadow: none !important;
+    border: 1px solid #cbd5e1 !important;
+    padding: 8px 12px !important;
+    margin-bottom: 10px !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+  /* 未上傳時的空白框在列印時保持簡約質感 */
+  #planPlaceholder {
+    border: 1px dashed #94a3b8 !important;
+    background: #f8fafc !important;
+    padding: 20px 10px !important;
+  }
+
+  #planCard img {
+    width: auto !important;
+    max-width: 100% !important;
+    max-height: 260px !important;
+    object-fit: contain !important;
+    margin: 0 auto !important;
+  }
+
+  /* 第四區塊：雷達圖高度與防切邊修正 */
+  #radarChartCard {
+    box-shadow: none !important;
+    border: 1px solid #cbd5e1 !important;
+    padding: 8px 12px !important;
+    margin-bottom: 10px !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    overflow: visible !important; /* 確保不被裁切 */
+  }
+  #radarChartCard > div:nth-child(2) {
+    height: 260px !important; /* 修正：放寬高度至 260px，不再硬壓造成切邊 */
+    max-width: 420px !important;
+    margin: 0 auto !important;
+    position: relative !important;
+  }
+  #radarChart {
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  /* 第五區塊：結論卡片與強制換頁 */
+  #conclusionCard {
+    box-shadow: none !important;
+    border: 1px solid #cbd5e1 !important;
+    padding: 8px 14px !important;
+    margin-bottom: 0 !important;
+    page-break-after: always !important; /* 第五區塊結束後強制換到第二頁 */
+    break-after: page !important;
+  }
+  #iptConclusion {
+    display: none !important;
+  }
+  #dispConclusion {
+    display: block !important;
+    font-size: 0.9rem !important;
+  }
+
+  /* 第二頁起：空間檢核項目卡片防止跨頁被切成兩半 */
+  .space-card {
+    box-shadow: none !important;
+    border: 1px solid #cbd5e1 !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    margin-bottom: 12px !important;
+  }
+
+  .crit-select {
+    border: none !important;
+    background: transparent !important;
+    appearance: none;
+    -webkit-appearance: none;
+    font-weight: 600;
+    color: #0f172a;
+    padding: 0 !important;
+  }
+}
+
+.print-summary-box {
+  display: none;
+}
+
+/* 空間未設置時的停用樣式 */
+.space-card.is-disabled {
+  background-color: #f1f5f9;
+  border-color: #e2e8f0;
+  opacity: 0.65;
+}
+
+.space-card.is-disabled .criteria-grid {
+  pointer-events: none;
+  filter: grayscale(1);
+}
+
+.space-card.is-disabled .space-scores {
+  text-decoration: line-through;
+  opacity: 0.5;
+}
+
+/* 自訂標頭勾選框樣式 */
+.space-active-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #334155;
+  background: white;
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+}

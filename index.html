@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>住宅房型檢核系統</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+  
+<body>
+
+<div class="container">
+  <header>
+    <!-- 隱藏的實體上傳 Input，由下方家配圖虛線框點擊觸發 -->
+    <input type="file" id="iptFloorPlan" accept="image/*" style="display:none;" onchange="onFloorPlanUpload(this)">
+
+    <!-- 置中標題與滿版底線 -->
+    <h1 style="text-align: center; margin-bottom: 16px; padding-bottom: 14px; border-bottom: 2px solid var(--primary);">
+      住宅房型檢核系統
+    </h1>
+      
+    <!-- 第一行：建案戶號與房型規格、套房數量設定 -->
+    <div class="type-selector" style="align-items: center; justify-content: space-between;">
+      <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+        <!-- 建案與戶號輸入 -->
+        <label style="display:inline-flex; align-items:center; gap:6px;">
+          <span>建案名稱：</span>
+          <input type="text" id="iptProjectName" placeholder="例如：遠雄中央公園" style="padding: 6px 10px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.9rem; width: 130px;" oninput="updateSpecTitle()">
+        </label>
+
+        <label style="display:inline-flex; align-items:center; gap:6px;">
+          <span>戶號：</span>
+          <input type="text" id="iptUnitNumber" placeholder="例如：A1-8F" style="padding: 6px 10px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.9rem; width: 90px;" oninput="updateSpecTitle()">
+        </label>
+
+        <span style="color: #cbd5e1;">|</span>
+
+        <!-- 房型按鈕群 -->
+        <label>動態房型套用：</label>
+        <div class="btn-group">
+          <button type="button" class="type-btn" onclick="setPreset('1')">1房</button>
+          <button type="button" class="type-btn active" onclick="setPreset('2')">2房</button>
+          <button type="button" class="type-btn" onclick="setPreset('3')">3房</button>
+          <button type="button" class="type-btn" onclick="setPreset('4')">4房</button>
+        </div>
+        <input type="hidden" id="selBedrooms" value="2">
+
+        <label style="display:inline-flex; align-items:center; gap:6px; cursor:pointer; font-weight:600; font-size:0.9rem; color:#1e293b;">
+          <input type="checkbox" id="chkPlusOne" onchange="togglePlusOne(this.checked)" style="width:16px; height:16px; cursor:pointer;">
+          <span>＋1房</span>
+        </label>
+
+        <!-- 套房數量選擇器 (移至同一行) -->
+        <label style="font-weight: 600; font-size: 0.9rem; color: #1e293b; display: inline-flex; align-items: center; gap: 6px; margin-left: 4px;">
+          <span>套房數量：</span>
+          <select id="selSuiteCount" onchange="onSuiteCountChange(parseInt(this.value))" style="padding: 4px 8px; border-radius: 6px; border: 1px solid #cbd5e1; font-weight: 600; color: var(--primary);">
+            <!-- 選項由 JS 動態生成 -->
+          </select>
+        </label>
+
+        <!-- 當前規格標籤 -->
+        <span id="dispRoomSpec" style="font-weight: 700; color: var(--primary); font-size: 0.95rem; background: #eff6ff; padding: 4px 10px; border-radius: 6px; border: 1px solid #bfdbfe;">
+          2房/1套房
+        </span>
+      </div>
+    </div>
+
+    <!-- 第二行：分數極端值套用按鈕群 -->
+    <div class="type-selector" style="margin-top: 12px; padding-top: 12px; border-top: 1px dashed #e2e8f0; align-items: center;">
+      <label>分數套用：</label>
+      <div class="btn-group">
+        <button type="button" class="type-btn" onclick="applyExtremePreset('max')" style="background: #f0fdf4; border-color: #86efac; color: #166534; font-weight: 600;">
+          ★ 最高分
+        </button>
+        <button type="button" class="type-btn" onclick="applyExtremePreset('min')" style="background: #fef2f2; border-color: #fecaca; color: #991b1b; font-weight: 600;">
+          ▲ 最低標分
+        </button>
+        <button type="button" class="type-btn" onclick="resetToDefault()" style="background: #f1f5f9; border-color: #cbd5e1; color: #475569; font-weight: 600;">
+          ↺ 恢復預設
+        </button>
+      </div>
+    </div>
+
+    <!-- 第三行：匯入 AI 檢核數據 (獨立一行) -->
+    <div class="type-selector" style="margin-top: 12px; padding-top: 12px; border-top: 1px dashed #e2e8f0;">
+      <button type="button" class="type-btn" onclick="importFromAI()" style="width: 100%; background: #eef2ff; border-color: #a5b4fc; color: #4338ca; font-weight: 700; padding: 10px 0; font-size: 0.95rem; display: flex; align-items: center; justify-content: center; gap: 8px;">
+        <span>⚡ 匯入 AI 檢核數據 (自動辨識平面圖填表)</span>
+      </button>
+    </div>
+  </header>
+  <!-- 第三區塊：家配平面圖卡片 (預設顯示空白提示框，點擊可直接上傳) -->
+  <div id="planCard" class="space-card" style="padding: 16px; margin-bottom: 16px; text-align: center;">
+    <div style="width: 100%; font-weight: 700; color: var(--primary); font-size: 1.05rem; margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 8px; text-align: left;">
+    家配平面圖
+    </div>
+
+    <!-- 未上傳時的空白佔位提示框 (點擊觸發檔案選擇器) -->
+  <div id="planPlaceholder" onclick="document.getElementById('iptFloorPlan').click()" style="border: 2px dashed #cbd5e1; border-radius: 8px; padding: 36px 16px; background: #f8fafc; cursor: pointer; transition: all 0.2s;">
+    <div style="font-size: 2rem; margin-bottom: 6px;">📷</div>
+    <div style="font-weight: 600; color: #475569; font-size: 0.95rem;">尚未上傳家配圖</div>
+    <div style="color: #94a3b8; font-size: 0.8rem; margin-top: 4px;">點擊此處選擇平面圖檔</div>
+  </div>
+
+    <!-- 上傳後顯示的實體圖片 (預設隱藏) -->
+    <img id="imgFloorPlan" src="" alt="家配平面圖" style="width: 100%; max-height: 480px; object-fit: contain; border-radius: 8px; display: none; margin: 0 auto;">
+  </div>
+
+  <!-- 第四區塊：空間機能指標雷達圖 -->
+  <div id="radarChartCard" class="space-card" style="padding: 16px; margin-bottom: 16px; display: flex; flex-direction: column; align-items: center;">
+    <div style="width: 100%; font-weight: 700; color: var(--primary); font-size: 1.05rem; margin-bottom: 8px; border-bottom: 1px solid var(--border); padding-bottom: 8px;">
+      空間機能指標雷達圖
+    </div>
+    <div style="position: relative; width: 100%; max-width: 440px; height: 300px;">
+      <canvas id="radarChart"></canvas>
+    </div>
+  </div>
+
+  <!-- 第五區塊：評分結果綜合結語 -->
+  <div id="conclusionCard" class="space-card" style="padding: 16px; margin-bottom: 20px;">
+    <div style="width: 100%; font-weight: 700; color: var(--primary); font-size: 1.05rem; margin-bottom: 10px; border-bottom: 1px solid var(--border); padding-bottom: 8px;">
+      評估綜合結語
+    </div>
+    <textarea id="iptConclusion" placeholder="請輸入本案戶型規劃優缺點、動線採光及整體評語..." style="width: 100%; min-height: 80px; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; line-height: 1.5; resize: vertical;"></textarea>
+    <div id="dispConclusion" style="display: none; font-size: 0.95rem; line-height: 1.6; color: #334155; white-space: pre-wrap;"></div>
+  </div>
+
+  <!-- 第二頁起：各空間詳細檢核卡片 -->
+  <div id="spacesContainer"></div>
+</div>
+
+<div class="sticky-footer">
+  <div class="footer-inner">
+    <div class="score-summary">
+      <div class="score-item">
+        <span class="label">動態低標門檻</span>
+        <span class="val" id="dispLow">0.0</span>
+      </div>
+      <div class="score-item">
+        <span class="label">動態高標滿分</span>
+        <span class="val" id="dispHigh">0.0</span>
+      </div>
+      <div class="score-item">
+        <span class="label">原始實得分數</span>
+        <span class="val" id="dispRaw">0.0</span>
+      </div>
+      <div class="score-item">
+        <span class="label">標準分 (60～100分)</span>
+        <div class="final-score-box">
+          <span class="final-score" id="dispFinal">60.0</span>
+          <span class="final-unit">分</span>
+        </div>
+      </div>
+    </div>
+    <button class="btn-action" onclick="exportReportPDF()">輸出評估結果 PDF</button>
+  </div>
+</div>
+<script src="script.js"></script>
+  <!-- 自訂 AI 匯入彈出視窗 (Modal) -->
+  <div id="aiModal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 9999; align-items: center; justify-content: center; padding: 16px;">
+    <div style="background: white; border-radius: 12px; max-width: 600px; width: 100%; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <h3 style="color: var(--primary); font-size: 1.15rem; font-weight: 700;">⚡ 貼上 AI 檢核數據代碼</h3>
+        <button type="button" onclick="closeAiModal()" style="background: none; border: none; font-size: 1.4rem; cursor: pointer; color: #64748b;">✕</button>
+      </div>
+      <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 10px;">請將 AI 產出的評估代碼（可整段多行直接貼上）複製於下方：</p>
+      <textarea id="iptAiJson" placeholder='貼上例如：{"projectName":"緻信義", ...}' style="width: 100%; height: 180px; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: monospace; font-size: 0.85rem; resize: vertical; margin-bottom: 16px; outline: none;"></textarea>
+      <div style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button type="button" onclick="closeAiModal()" style="padding: 8px 16px; border: 1px solid #cbd5e1; background: white; border-radius: 6px; cursor: pointer; font-weight: 600; color: #475569;">取消</button>
+        <button type="button" onclick="confirmImportFromAI()" style="padding: 8px 18px; background: var(--primary); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">確認載入</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
