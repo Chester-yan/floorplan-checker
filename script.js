@@ -549,53 +549,121 @@ function updateSpecTitle() {
   } catch (e) { /* 跨域環境忽略 */ }
 }
 
-// 雷達圖動態重繪
+// 動態更新空間機能指標雷達圖（依房型基準空間常駐顯示，未留設者以 0 分計）
 function updateRadarChart() {
   const canvas = document.getElementById("radarChart");
   if (!canvas || typeof Chart === "undefined") return;
 
-  const activeSpaces = spaces.filter(sp => sp.enabled && (sp.userActive !== false));
-  const labels = activeSpaces.map(sp => sp.name);
-  const dataValues = activeSpaces.map(sp => {
+  const { roomType, hasPlusOne } = getCurrentLayoutState();
+
+  // 1. 軸向空間過濾：
+  // 凡是「房型啟用的必備基準空間 (isRequired)」OR「使用者有留設且啟用的空間 (sp.userActive !== false)」皆納入雷達圖
+  const chartSpaces = spaces.filter(sp => {
+    if (!sp.enabled) return false;
+    const isRequired = isBaselineRequiredSpace(sp.id, roomType, hasPlusOne);
+    return isRequired || sp.userActive !== false;
+  });
+
+  const labels = chartSpaces.map(sp => sp.name);
+
+  // 2. 計算各空間在雷達圖上的標準分
+  const dataValues = chartSpaces.map(sp => {
+    // 關鍵：建商若未留設該空間 (userActive 為 false)，直接以 0 分計
+    if (sp.userActive === false) {
+      return 0;
+    }
+
     const low = parseFloat(document.getElementById(`low_${sp.id}`)?.innerText || 0);
     const high = parseFloat(document.getElementById(`high_${sp.id}`)?.innerText || 1);
     const raw = parseFloat(document.getElementById(`raw_${sp.id}`)?.innerText || 0);
 
     if (high <= low) return 100;
-    return Math.max(0, Math.min(100, Math.round(((raw - low) / (high - low)) * 40 + 60)));
+
+    // 常態換算標準分 (低標60，高標100；低於低標時等比扣減)
+    const score = 60.0 + ((raw - low) / (high - low)) * 40.0;
+    return Math.max(0, Math.min(100, Math.round(score)));
   });
+
+  // 3. 高標 (100分) 與低標 (60分) 基準線資料
+  const highThresholdData = labels.map(() => 100);
+  const lowThresholdData = labels.map(() => 60);
+
+  // 4. 定義三組 Dataset
+  const chartDatasets = [
+    {
+      label: "本案評估得分",
+      data: dataValues,
+      backgroundColor: "rgba(30, 58, 138, 0.2)",
+      borderColor: "#1e3a8a",
+      pointBackgroundColor: "#1e3a8a",
+      pointBorderColor: "#fff",
+      borderWidth: 2.5,
+      order: 1
+    },
+    {
+      label: "高標滿分線 (100分)",
+      data: highThresholdData,
+      backgroundColor: "transparent",
+      borderColor: "rgba(22, 163, 74, 0.6)", // 綠色虛線
+      borderWidth: 1.5,
+      borderDash: [4, 4],
+      pointRadius: 0,
+      order: 2
+    },
+    {
+      label: "低標合格線 (60分)",
+      data: lowThresholdData,
+      backgroundColor: "transparent",
+      borderColor: "rgba(220, 38, 38, 0.5)", // 紅色虛線
+      borderWidth: 1.5,
+      borderDash: [3, 3],
+      pointRadius: 0,
+      order: 3
+    }
+  ];
 
   if (radarChartInstance) {
     radarChartInstance.data.labels = labels;
-    radarChartInstance.data.datasets[0].data = dataValues;
+    radarChartInstance.data.datasets = chartDatasets;
     radarChartInstance.update();
   } else {
     radarChartInstance = new Chart(canvas.getContext("2d"), {
       type: "radar",
       data: {
         labels: labels,
-        datasets: [{
-          data: dataValues,
-          backgroundColor: "rgba(30, 58, 138, 0.15)",
-          borderColor: "#1e3a8a",
-          pointBackgroundColor: "#1e3a8a",
-          pointBorderColor: "#fff",
-          borderWidth: 2,
-          fill: true
-        }]
+        datasets: chartDatasets
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        layout: {
+          padding: { top: 10, bottom: 15, left: 15, right: 15 }
+        },
         scales: {
           r: {
-            min: 50,
+            min: 0,   // 設為 0，讓缺項或 0 分空間明確凹陷至中心圓點
             max: 100,
-            ticks: { stepSize: 10, font: { size: 10 } },
-            pointLabels: { font: { size: 11, weight: "bold" }, color: "#334155" }
+            ticks: {
+              stepSize: 20,
+              font: { size: 10 }
+            },
+            pointLabels: {
+              font: { size: 11, weight: "bold" },
+              color: "#334155"
+            }
           }
         },
-        plugins: { legend: { display: false } }
+        plugins: {
+          legend: {
+            display: true,
+            position: "bottom",
+            labels: {
+              boxWidth: 16,
+              font: { size: 11, weight: "600" },
+              color: "#475569"
+            }
+          }
+        }
       }
     });
   }
