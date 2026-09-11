@@ -801,6 +801,7 @@ function closeAiModal() {
 }
 
 // 確認載入並執行資料同步
+// 確認載入並執行資料同步
 function confirmImportFromAI() {
   const textarea = document.getElementById("iptAiJson");
   if (!textarea || !textarea.value.trim()) {
@@ -809,30 +810,50 @@ function confirmImportFromAI() {
   }
 
   try {
-    const data = JSON.parse(textarea.value.trim());
+    // 清洗不可見字符與全形空白
+    let cleanText = textarea.value.trim().replace(/[\u00A0\u1680\u180E\u2000-\u200B\u202F\u205F\u3000\uFEFF]/g, ' ');
+    const data = JSON.parse(cleanText);
 
     // 1. 基本資訊填入
-    if (data.projectName) {
+    if (data.projectName !== undefined) {
       const el = document.getElementById("iptProjectName");
       if (el) el.value = data.projectName;
     }
-    if (data.unitNumber) {
+    if (data.unitNumber !== undefined) {
       const el = document.getElementById("iptUnitNumber");
       if (el) el.value = data.unitNumber;
     }
 
-    // 2. 房型切換
-    if (data.roomType) {
+    // 2. 動態房型套用按鈕切換（切換 1/2/3/4 房按鈕樣式與受控項）
+    if (data.roomType !== undefined) {
       setPreset(String(data.roomType));
     }
 
-    // 3. 綜合結語填入
-    if (data.conclusion) {
+    // 3. +1 房開關切換
+    if (data.hasPlusOne !== undefined) {
+      const chk = document.getElementById("chkPlusOne");
+      if (chk) {
+        chk.checked = !!data.hasPlusOne;
+        togglePlusOne(chk.checked);
+      }
+    }
+
+    // 4. 套房數量還原
+    if (data.suiteCount !== undefined) {
+      const selSuite = document.getElementById("selSuiteCount");
+      if (selSuite) {
+        selSuite.value = data.suiteCount;
+        onSuiteCountChange(parseInt(data.suiteCount));
+      }
+    }
+
+    // 5. 綜合結語填入
+    if (data.conclusion !== undefined) {
       const el = document.getElementById("iptConclusion");
       if (el) el.value = data.conclusion;
     }
 
-    // 4. 自動關閉未設置空間
+    // 6. 自動關閉未設置空間
     if (Array.isArray(data.disabledSpaces)) {
       data.disabledSpaces.forEach(spaceId => {
         const chk = document.getElementById(`toggle_${spaceId}`);
@@ -841,7 +862,7 @@ function confirmImportFromAI() {
       });
     }
 
-    // 5. 選項同步至資料模型與畫面選單
+    // 7. 選項同步至資料模型與畫面選單
     if (data.selections) {
       Object.keys(data.selections).forEach(spaceId => {
         const sp = spaces.find(s => s.id === spaceId);
@@ -863,7 +884,7 @@ function confirmImportFromAI() {
     updateLayoutConfig();
     updateSpecTitle();
     closeAiModal();
-    alert("評估資料載入成功！雷達圖與分數已同步更新。");
+    alert("✅ 評估資料載入成功！房型按鈕、+1房、套房數量與所有評估已同步。");
 
   } catch (err) {
     alert("格式解析失敗，請確認貼上完整的 JSON 內容。\n錯誤原因：" + err.message);
@@ -924,7 +945,18 @@ function exportCurrentJSON() {
   try {
     const projectName = document.getElementById("iptProjectName") ? document.getElementById("iptProjectName").value.trim() : "";
     const unitNumber = document.getElementById("iptUnitNumber") ? document.getElementById("iptUnitNumber").value.trim() : "";
+    
+    // 取得當前動態房型套用值 (1, 2, 3, 4)
     const selBedrooms = document.getElementById("selBedrooms") ? document.getElementById("selBedrooms").value : "2";
+    
+    // 取得 +1 房勾選狀態
+    const chkPlusOne = document.getElementById("chkPlusOne");
+    const hasPlusOne = chkPlusOne ? chkPlusOne.checked : false;
+
+    // 取得套房數量設定
+    const selSuite = document.getElementById("selSuiteCount");
+    const suiteCount = selSuite ? parseInt(selSuite.value) : 1;
+
     const conclusion = document.getElementById("iptConclusion") ? document.getElementById("iptConclusion").value.trim() : "";
 
     // 1. 抓取被手動關閉（未設置）的空間 ID
@@ -938,11 +970,13 @@ function exportCurrentJSON() {
       selections[sp.id] = sp.criteria.map(crit => crit.d);
     });
 
-    // 3. 組成標準資料包
+    // 3. 組成完整標準資料包
     const exportData = {
       projectName: projectName,
       unitNumber: unitNumber,
-      roomType: selBedrooms,
+      roomType: selBedrooms,       // 動態房型按鈕 (1/2/3/4)
+      hasPlusOne: hasPlusOne,     // ＋1房勾選狀態 (true/false)
+      suiteCount: suiteCount,     // 套房數量
       disabledSpaces: disabledSpaces,
       conclusion: conclusion,
       selections: selections
@@ -950,7 +984,7 @@ function exportCurrentJSON() {
 
     const jsonString = JSON.stringify(exportData, null, 2);
 
-    // 4. 開啟彈窗並把內容填入，方便直接查看或手動複製
+    // 4. 開啟彈窗並把內容填入
     const modal = document.getElementById("aiModal");
     const textarea = document.getElementById("iptAiJson");
     if (modal && textarea) {
@@ -960,10 +994,10 @@ function exportCurrentJSON() {
       textarea.select();
     }
 
-    // 5. 同時嘗試自動寫入剪貼簿
+    // 5. 自動寫入剪貼簿
     if (navigator.clipboard && window.isSecureContext) {
       navigator.clipboard.writeText(jsonString).then(() => {
-        alert("✅ 當前評估 JSON 代碼已自動複製至剪貼簿！\n彈出視窗內亦保留完整代碼供備份。");
+        alert("✅ 當前評估 JSON 代碼已自動複製至剪貼簿！\n已完整記錄房型、+1房、套房數及各空間評估。");
       }).catch(() => {
         alert("已為您產生評估代碼！請直接在框中按 Ctrl+C 複製。");
       });
