@@ -72,7 +72,8 @@ p.subtitle { color: var(--text-muted); font-size: 0.9rem; }
   /* 隱藏網頁操作按鈕與底部浮動列 */
   .type-selector,
   .sticky-footer,
-  .btn-action {
+  .btn-action,
+  #planImgActions {
     display: none !important;
   }
 
