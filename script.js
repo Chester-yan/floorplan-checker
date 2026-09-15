@@ -4,7 +4,7 @@
 
 let radarChartInstance = null;
 
-// 通用浴室選項範本 (8項指標)
+// 通用浴室選項範本 (8項指標 - 全衛浴無乾濕分離改為 0 分)
 const bathCriteriaTemplate = [
   { name: "開窗", opts: [{ l: "無開窗", v: 0 }, { l: "有開窗", v: 1.0 }], d: 0 },
   { name: "套件數", opts: [{ l: "兩件式", v: 0.6 }, { l: "三件式", v: 1.0 }, { l: "四件式", v: 1.2 }], d: 1 },
@@ -12,15 +12,15 @@ const bathCriteriaTemplate = [
   { name: "馬桶空間寬度", opts: [{ l: "<74cm", v: "not ok" }, { l: "≥74cm", v: 0.6 }, { l: ">80cm", v: 1.0 }], d: 1 },
   { name: "淋浴間尺寸", opts: [{ l: "未設置", v: 0 }, { l: "<80x80cm", v: "not ok" }, { l: "≥80x80cm", v: 0.6 }, { l: ">90x90cm", v: 1.0 }, { l: ">1x1m", v: 1.2 }], d: 1 },
   { name: "浴缸尺寸", opts: [{ l: "未設置", v: 0 }, { l: "<145cm", v: 0.6 }, { l: ">145cm", v: 1.0 }], d: 0 },
-  { name: "乾溼分離", opts: [{ l: "無", v: "not ok" }, { l: "有", v: 1.0 }], d: 1 },
+  { name: "乾溼分離", opts: [{ l: "無", v: 0 }, { l: "有", v: 1.0 }], d: 1 },
   { name: "三角配置", opts: [{ l: "是", v: 0 }, { l: "否", v: 1.0 }], d: 1 }
 ];
 
-// 次臥房選項範本生成器 (10項指標 - 最新標準)
+// 次臥房選項範本生成器 (10項指標 - 次臥無採光為 0 分)
 function createSecondaryBedroomCriteria() {
   return [
-    { name: "採光", opts: [{ l: "無", v: "not ok" }, { l: "間接採光", v: 0.6 }, { l: "直接採光", v: 1.0 }], d: 2 },
-    { name: "陽台", opts: [{ l: "無連接", v: 0 }, { l: "有連接", v: 1.0 }], d: 0 },
+    { name: "空間採光", opts: [{ l: "無", v: 0 }, { l: "間接採光", v: 0.6 }, { l: "直接採光", v: 1.0 }], d: 2 },
+    { name: "連接陽台", opts: [{ l: "無連接", v: 0 }, { l: "有連接", v: 1.0 }], d: 0 },
     { name: "是否為套房", opts: [{ l: "否", v: 0 }, { l: "是", v: 1.0 }], d: 0, isSuiteTrigger: true },
     { name: "床邊走道數", opts: [{ l: "<一邊", v: "not ok" }, { l: "一邊", v: 0.6 }, { l: "兩邊", v: 0.8 }, { l: "三邊", v: 1.0 }], d: 2 },
     { name: "床邊走道淨寬", opts: [{ l: "<50cm", v: 0 }, { l: "≥50cm", v: 0.6 }, { l: ">60cm", v: 1.0 }, { l: ">70cm", v: 1.2 }, { l: ">80cm", v: 1.4 }, { l: ">90cm", v: 1.6 }], d: 2 },
@@ -45,7 +45,7 @@ let spaces = [
   {
     id: "ke_ting", name: "客廳", enabled: true,
     criteria: [
-      { name: "採光", opts: [{ l: "無採光", v: 0 }, { l: "間接採光", v: 0.6 }, { l: "直接採光", v: 1.0 }], d: 2 },
+      { name: "空間採光", opts: [{ l: "無採光", v: "not ok" }, { l: "間接採光", v: 0.6 }, { l: "直接採光", v: 1.0 }], d: 2 },
       { name: "連接陽台", opts: [{ l: "無連接", v: 0 }, { l: "有連接", v: 1.0 }], d: 0 },
       { name: "客廳深度", opts: [{ l: "<2.8m", v: "not ok" }, { l: "<3m", v: 0.6 }, { l: ">3m", v: 1.0 }, { l: ">3.2m", v: 1.2 }, { l: ">3.6m", v: 1.4 }], d: 2 },
       { name: "沙發座數", opts: [{ l: "座位<居住人數", v: 0.6 }, { l: "符合居住人數", v: 1.0 }], d: 1 }
@@ -54,16 +54,16 @@ let spaces = [
   {
     id: "can_ting", name: "餐廳", enabled: true,
     criteria: [
-      { name: "採光", opts: [{ l: "無採光", v: 0 }, { l: "間接採光", v: 1.0 }, { l: "直接採光", v: 1.2 }], d: 1 },
+      { name: "空間採光", opts: [{ l: "無採光", v: 0 }, { l: "間接採光", v: 1.0 }, { l: "直接採光", v: 1.2 }], d: 1 },
       { name: "餐桌座位數", opts: [{ l: "不符合人數", v: "not ok" }, { l: "符合居住人數", v: 1.0 }], d: 1 },
       { name: "座椅移動空間", opts: [{ l: "<70cm", v: "not ok" }, { l: ">70cm", v: 0.6 }, { l: ">75cm", v: 0.8 }, { l: ">80cm", v: 1.0 }, { l: ">90cm", v: 1.2 }], d: 3 }
     ]
   },
-{
+  {
     id: "chu_fang", name: "廚房", enabled: true,
     criteria: [
-      { name: "檯面深度", opts: [{ l: "<60cm", v: "not ok" }, { l: ">60cm", v: 1.0 }], d: 1 },
-      { name: "料理台寬度", opts: [{ l: "<60cm", v: "not ok" }, { l: ">60cm", v: 0.6 }, { l: ">70cm", v: 0.8 }, { l: ">80cm", v: 1.0 }], d: 3 },
+      { name: "檯面深度", opts: [{ l: "<60cm", v: 0 }, { l: ">60cm", v: 1.0 }], d: 1 },
+      { name: "料理台寬度", opts: [{ l: "<60cm", v: 0 }, { l: ">60cm", v: 0.6 }, { l: ">70cm", v: 0.8 }, { l: ">80cm", v: 1.0 }], d: 3 },
       { name: "走道淨寬", opts: [{ l: "<70cm", v: "not ok" }, { l: ">70cm", v: 0.6 }, { l: ">80cm", v: 1.0 }, { l: ">90cm", v: 1.2 }], d: 2 },
       { name: "排油煙路徑", opts: [{ l: ">5m", v: 0.6 }, { l: "<5m", v: 0.8 }, { l: "<1m", v: 1.0 }], d: 2 },
       { name: "留設電器櫃位置", opts: [{ l: "無電器櫃", v: 0 }, { l: "有", v: 1.0 }], d: 1 },
@@ -85,10 +85,10 @@ let spaces = [
   {
     id: "yang_tai", name: "工作陽台", enabled: true,
     criteria: [
-      { name: "設置室外機", opts: [{ l: "無設置", v: "not ok" }, { l: "有設置", v: 1.0 }], d: 1 },
+      { name: "設置室外機", opts: [{ l: "無設置", v: 0 }, { l: "有設置", v: 1.0 }], d: 1 },
       { name: "設置洗衣機", opts: [{ l: "無設置", v: "not ok" }, { l: "有設置", v: 1.0 }], d: 1 },
       { name: "設置洗衣槽", opts: [{ l: "無設置", v: 0.0 }, { l: "有設置", v: 1.0 }], d: 1 },
-      { name: "設置升降曬衣架", opts: [{ l: "無設置", v: "not ok" }, { l: "有設置", v: 1.0 }], d: 1 },
+      { name: "設置升降曬衣架", opts: [{ l: "無設置", v: 0 }, { l: "有設置", v: 1.0 }], d: 1 },
       { name: "開門窗是否影響曬衣架", opts: [{ l: "有影響", v: 0 }, { l: "無影響", v: 1.0 }], d: 1 },
       { name: "坪數大小", opts: [{ l: "<1坪", v: 0.0 }, { l: ">1坪", v: 0.6 }, { l: ">1.2坪", v: 1.0 }], d: 1 }
     ]
@@ -96,15 +96,15 @@ let spaces = [
   {
     id: "zhu_wo", name: "主臥房", enabled: true,
     criteria: [
-      { name: "採光", opts: [{ l: "無採光", v: "not ok" }, { l: "間接採光", v: 0.6 }, { l: "直接採光", v: 1.0 }], d: 2 },
-      { name: "陽台", opts: [{ l: "無連接", v: 0 }, { l: "有連接", v: 1.0 }], d: 0 },
+      { name: "空間採光", opts: [{ l: "無採光", v: "not ok" }, { l: "間接採光", v: 0.6 }, { l: "直接採光", v: 1.0 }], d: 2 },
+      { name: "連接陽台", opts: [{ l: "無連接", v: 0 }, { l: "有連接", v: 1.0 }], d: 0 },
       { name: "是否為套房", opts: [{ l: "否", v: 0 }, { l: "是", v: 1.0 }], d: 1, isSuiteTrigger: true },
       { name: "床邊留設走道數", opts: [{ l: "<三邊", v: "not ok" }, { l: "三邊", v: 1.0 }], d: 1 },
       { name: "床邊走道淨寬", opts: [{ l: "<50cm", v: 0 }, { l: ">50cm", v: 0.6 }, { l: ">60cm", v: 1.0 }, { l: ">70cm", v: 1.2 }, { l: ">80cm", v: 1.4 }, { l: ">90cm", v: 1.6 }], d: 2 },
-      { name: "衣櫃長度", opts: [{ l: "<150cm", v: "not ok" }, { l: ">150cm", v: 0.6 }, { l: ">180cm", v: 0.8 }, { l: ">200cm", v: 1.0 }, { l: ">250cm", v: 1.2 }, { l: ">300cm", v: 1.6 }], d: 3 },
+      { name: "衣櫃長度", opts: [{ l: "<150cm", v: 0 }, { l: ">150cm", v: 0.6 }, { l: ">180cm", v: 0.8 }, { l: ">200cm", v: 1.0 }, { l: ">250cm", v: 1.2 }, { l: ">300cm", v: 1.6 }], d: 3 },
       { name: "衣櫃深度", opts: [{ l: "<60cm", v: "not ok" }, { l: ">60cm", v: 1.0 }, { l: ">65cm", v: 1.2 }], d: 1 },
       { name: "衣櫃前淨空間", opts: [{ l: "<60cm", v: 0 }, { l: ">60cm", v: 1.0 }, { l: ">70cm", v: 1.2 }, { l: ">80cm", v: 1.4 }, { l: ">90cm", v: 1.6 }], d: 1 },
-      { name: "是否留設梳妝台", opts: [{ l: "無", v: "not ok" }, { l: "有", v: 1.0 }], d: 1 },
+      { name: "是否留設梳妝台", opts: [{ l: "無", v: 0 }, { l: "有", v: 1.0 }], d: 1 },
       { name: "床具尺寸", opts: [{ l: "<5x6.2尺", v: 0 }, { l: "≥5x6.2尺", v: 0.6 }, { l: ">6x6.2尺", v: 1 }, { l: ">6x7尺", v: 1.2 }], d: 1 }
     ]
   },
@@ -127,21 +127,18 @@ let spaces = [
   }
 ];
 
-// 初始化使用者留設標記 (userActive 預設全開)
 spaces.forEach(sp => { if (sp.userActive === undefined) sp.userActive = true; });
 const defaultSpacesData = JSON.parse(JSON.stringify(spaces));
 
 // ==========================================
-// 共用輔助函式 (Helper Functions)
+// 共用輔助函式
 // ==========================================
 
-// 快速取得輸入框純文字
 const getIptVal = (id, fallback = "") => {
   const el = document.getElementById(id);
   return el && el.value.trim() ? el.value.trim() : fallback;
 };
 
-// 同步下拉選單選取值至畫面 DOM
 function syncSelectUI(spaceId, critIdx, val) {
   const card = document.getElementById(`card_${spaceId}`);
   if (card) {
@@ -149,7 +146,6 @@ function syncSelectUI(spaceId, critIdx, val) {
     const sel = selects[critIdx];
     if (sel) {
       sel.value = val;
-      // 取得當前選中項目的分數值
       const sp = spaces.find(s => s.id === spaceId);
       const optVal = sp?.criteria[critIdx]?.opts[val]?.v;
       sel.classList.toggle("not-ok", optVal === "not ok");
@@ -157,7 +153,6 @@ function syncSelectUI(spaceId, critIdx, val) {
   }
 }
 
-// 取得當前房型與勾選狀態
 function getCurrentLayoutState() {
   const selEl = document.getElementById("selBedrooms");
   const chkPlusOne = document.getElementById("chkPlusOne");
@@ -167,7 +162,6 @@ function getCurrentLayoutState() {
   };
 }
 
-// 空間卡片顯隱控制
 function setEnable(id, isEnable) {
   const sp = spaces.find(s => s.id === id);
   if (sp) {
@@ -177,7 +171,6 @@ function setEnable(id, isEnable) {
   }
 }
 
-// 檢查特定空間是否設定為套房
 function checkIsSuite(spaceId) {
   const sp = spaces.find(s => s.id === spaceId);
   if (!sp) return false;
@@ -189,7 +182,6 @@ function checkIsSuite(spaceId) {
 // 空間渲染與連動控制
 // ==========================================
 
-// 動態建構空間卡片 DOM
 function renderSpaces() {
   const container = document.getElementById("spacesContainer");
   if (!container) return;
@@ -206,10 +198,11 @@ function renderSpaces() {
       crit.opts.forEach((opt, optIdx) => {
         optHtml += `<option value="${optIdx}" ${optIdx === crit.d ? "selected" : ""}>${opt.l} (${opt.v})</option>`;
       });
+      const isNotOk = crit.opts[crit.d]?.v === "not ok";
       criteriaHtml += `
         <div class="crit-group">
           <label class="crit-label">${crit.name}</label>
-          <select class="crit-select" ${!sp.userActive ? 'disabled' : ''} onchange="onCritChange(${spIdx}, ${critIdx}, this)">
+          <select class="crit-select ${isNotOk ? 'not-ok' : ''}" ${!sp.userActive ? 'disabled' : ''} onchange="onCritChange(${spIdx}, ${critIdx}, this)">
             ${optHtml}
           </select>
         </div>
@@ -243,18 +236,19 @@ function renderSpaces() {
   updateSpecTitle();
 }
 
-// 評估指標變更監聽
 function onCritChange(spIdx, critIdx, el) {
   const sp = spaces[spIdx];
   const crit = sp.criteria[critIdx];
   crit.d = parseInt(el.value);
   el.classList.toggle("not-ok", crit.opts[crit.d]?.v === "not ok");
 
-  // 防呆：衛浴若選四件式，自動配置浴缸預設值
-  if (crit.name === "套件數" && crit.opts[crit.d]?.l === "四件式") {
+  // 防呆：衛浴套件數切換時，自動同步配置或重設浴缸尺寸
+  if (crit.name === "套件數") {
     const tubIdx = sp.criteria.findIndex(c => c.name === "浴缸尺寸");
     if (tubIdx !== -1) {
-      const targetTubIdx = sp.criteria[tubIdx].opts.findIndex(o => o.l === "<145cm");
+      const targetTubIdx = crit.opts[crit.d]?.l === "四件式"
+        ? sp.criteria[tubIdx].opts.findIndex(o => o.l === "<145cm")
+        : sp.criteria[tubIdx].opts.findIndex(o => o.l === "未設置");
       if (targetTubIdx !== -1) {
         sp.criteria[tubIdx].d = targetTubIdx;
         syncSelectUI(sp.id, tubIdx, targetTubIdx);
@@ -262,7 +256,6 @@ function onCritChange(spIdx, critIdx, el) {
     }
   }
 
-  // 是否引發空間卡片顯隱連動
   if (crit.name === "是否為套房" || (sp.id === "chu_fang" && crit.name === "設置中島")) {
     updateLayoutConfig();
   } else {
@@ -270,7 +263,6 @@ function onCritChange(spIdx, critIdx, el) {
   }
 }
 
-// 切換特定空間留設狀態（取消勾選視為建商未規劃該機能）
 function toggleSpaceActive(spaceId, isActive) {
   const sp = spaces.find(s => s.id === spaceId);
   if (!sp) return;
@@ -284,26 +276,20 @@ function toggleSpaceActive(spaceId, isActive) {
   calculateAll();
 }
 
-// 核心排版狀態更新（房型按鈕 / +1房 / 套房連動）
 function updateLayoutConfig() {
   const { roomType, hasPlusOne } = getCurrentLayoutState();
 
-  // 1. 常態機能空間（2房以上 或 1房含+1房 啟用玄關）
-  // 修正後：玄關、客廳、餐廳、廚房、陽台、主臥、客浴一律常態啟用卡片  
   ["xuan_guan", "ke_ting", "can_ting", "chu_fang", "yang_tai", "zhu_wo", "ke_yu"].forEach(id => setEnable(id, true));
 
-  // 2. 次臥房動態開展
   setEnable("ci_wo_1", roomType >= 2);
   setEnable("ci_wo_2", roomType >= 3);
   setEnable("ci_wo_3", roomType >= 4);
 
-  // 3. 獨立套浴依房間是否設定為套房連動
   setEnable("zhu_wo_bath", checkIsSuite("zhu_wo"));
   setEnable("ci_wo_1_bath", roomType >= 2 && checkIsSuite("ci_wo_1"));
   setEnable("ci_wo_2_bath", roomType >= 3 && checkIsSuite("ci_wo_2"));
   setEnable("ci_wo_3_bath", roomType >= 4 && checkIsSuite("ci_wo_3"));
 
-  // 4. +1房與中島空間連動
   setEnable("plus_one", hasPlusOne);
   const kitchen = spaces.find(s => s.id === "chu_fang");
   const islandOpt = kitchen ? kitchen.criteria.find(c => c.name === "設置中島") : null;
@@ -316,22 +302,27 @@ function updateLayoutConfig() {
 // 評分計算與基準判定
 // ==========================================
 
-// 判定特定空間在當前房型下是否為「基準必備空間」
 function isBaselineRequiredSpace(spaceId, roomType, hasPlusOne) {
-  // 玄關：2 房以上 或 1 房含 +1 房才算「必備基準空間」；純 1 房為加值空間
   if (spaceId === "xuan_guan") return roomType >= 2 || (roomType === 1 && hasPlusOne);
-
-  // 次臥房依房型階梯式判定
   if (spaceId === "ci_wo_1") return roomType >= 2;
   if (spaceId === "ci_wo_2") return roomType >= 3;
   if (spaceId === "ci_wo_3") return roomType >= 4;
 
-  // 客廳、餐廳、廚房、工作陽台、主臥、客浴：全房型一律為「必備基準空間」
   const coreSpaces = ["ke_ting", "can_ting", "chu_fang", "yang_tai", "zhu_wo", "ke_yu"];
   return coreSpaces.includes(spaceId);
 }
 
-// 全空間計分計算引擎
+function isBonusSpace(spaceId, roomType, hasPlusOne) {
+  if (roomType === 1 && !hasPlusOne && spaceId === "xuan_guan") {
+    return true;
+  }
+  const extraLuxurySpaces = [];
+  if (extraLuxurySpaces.includes(spaceId)) {
+    return true;
+  }
+  return false;
+}
+
 function calculateAll() {
   const { roomType, hasPlusOne } = getCurrentLayoutState();
   let baseLow = 0, baseHigh = 0, baseRaw = 0;
@@ -339,10 +330,10 @@ function calculateAll() {
 
   spaces.forEach((sp) => {
     let spLow = 0, spHigh = 0, spRaw = 0;
+    let hasNotOk = false;
     const isRequired = isBaselineRequiredSpace(sp.id, roomType, hasPlusOne);
     const isBonus = isBonusSpace(sp.id, roomType, hasPlusOne);
 
-    // 計算各空間本身的指標極值與實得
     sp.criteria.forEach((crit) => {
       const validScores = crit.opts.filter(o => typeof o.v === 'number').map(o => o.v);
       const minVal = validScores.length ? Math.min(...validScores) : 0;
@@ -353,26 +344,30 @@ function calculateAll() {
 
       if (sp.enabled && sp.userActive !== false) {
         const selOpt = crit.opts[crit.d];
-        if (selOpt && selOpt.v !== "not ok") {
-          spRaw += Number(selOpt.v);
+        if (selOpt) {
+          if (selOpt.v === "not ok") {
+            hasNotOk = true;
+          } else {
+            spRaw += Number(selOpt.v);
+          }
         }
       }
     });
 
-    // 依空間屬性分類累計
+    // 只要出現 not ok，該空間實得分數直接歸 0
+    if (hasNotOk) {
+      spRaw = 0;
+    }
+
     if (isBonus) {
-      // 加值空間（如 1 房玄關、未來洗衣房/劇院等）：
-      // 不計入基準門檻母體，僅在實質啟用時累計加值得分與滿分上限
       if (sp.enabled && sp.userActive !== false) {
         bonusRaw += spRaw;
         bonusHigh += spHigh;
       }
     } else {
-      // 低標合格門檻：僅由法定基準必備空間累計
       if (sp.enabled && isRequired) {
         baseLow += spLow;
       }
-      // 高標滿分線：必備空間 OR 使用者實質啟用的常態空間
       if (sp.enabled && (isRequired || sp.userActive !== false)) {
         baseHigh += spHigh;
       }
@@ -381,7 +376,6 @@ function calculateAll() {
       }
     }
 
-    // 更新各卡片右上角分數
     const elLow = document.getElementById(`low_${sp.id}`);
     const elHigh = document.getElementById(`high_${sp.id}`);
     const elRaw = document.getElementById(`raw_${sp.id}`);
@@ -390,7 +384,6 @@ function calculateAll() {
     if (elRaw) elRaw.innerText = (sp.enabled && sp.userActive !== false ? spRaw : 0).toFixed(1);
   });
 
-  // 底部統計數據顯示
   const dispLow = document.getElementById("dispLow");
   const dispHigh = document.getElementById("dispHigh");
   const dispRaw = document.getElementById("dispRaw");
@@ -398,66 +391,44 @@ function calculateAll() {
   if (dispHigh) dispHigh.innerText = (baseHigh + bonusHigh).toFixed(1);
   if (dispRaw) dispRaw.innerText = (baseRaw + bonusRaw).toFixed(1);
 
-  // 1. 計算基本空間的 60~100 分標準分
   let baseScore = 60.0;
   if (baseHigh > baseLow) {
     baseScore = 60.0 + ((baseRaw - baseLow) / (baseHigh - baseLow)) * 40.0;
   }
 
-  // 2. 計算加值空間的外掛加分點數（依基準 40 分量尺比例加權換算）
   let bonusScore = 0.0;
   if (baseHigh > baseLow && bonusRaw > 0) {
     bonusScore = (bonusRaw / (baseHigh - baseLow)) * 40.0;
   }
 
-  // 3. 總分疊加，並解除 100 分上限封頂限制
   let finalScore = Math.max(0, baseScore + bonusScore);
 
   const finalEl = document.getElementById("dispFinal");
   if (finalEl) {
     finalEl.innerText = finalScore.toFixed(1);
-    // 超過 100 分時使用亮眼金色/紫金色突顯卓越規劃
     finalEl.style.color = finalScore > 100 ? "#b45309" : finalScore >= 80 ? "var(--success)" : finalScore >= 60 ? "var(--primary)" : "var(--danger)";
   }
 
   updateRadarChart();
 }
 
-// 輔助函式：定義哪些空間屬於「純加值外掛加分空間」
-function isBonusSpace(spaceId, roomType, hasPlusOne) {
-  // 純 1 房（無 +1 房）時，玄關作為唯一彈性外掛加值空間
-  if (roomType === 1 && !hasPlusOne && spaceId === "xuan_guan") {
-    return true;
-  }
-
-  // 特殊奢華/機能加值空間保留區（待第四章空間規範完備後再行增設）
-  const extraLuxurySpaces = [];
-  if (extraLuxurySpaces.includes(spaceId)) {
-    return true;
-  }
-
-  return false;
-}
-
 // ==========================================
 // 房型設定、套房配置與極端值套用
 // ==========================================
 
-// 房型預設切換 (1/2/3/4 房)
 function setPreset(roomNum, shouldAllocate = true) {
   const selEl = document.getElementById("selBedrooms");
   if (selEl) selEl.value = roomNum;
 
   document.querySelectorAll(".type-btn").forEach(btn => {
-    btn.classList.toggle("active", btn.getAttribute("onclick")?.includes(`setPreset('${roomNum}')`) || btn.getAttribute("onclick")?.includes(`setPreset(${roomNum})`));
+    const attr = btn.getAttribute("onclick");
+    btn.classList.toggle("active", attr?.includes(`setPreset('${roomNum}')`) || attr?.includes(`setPreset(${roomNum})`));
   });
 
-  // 傳入 shouldAllocate 旗標
   updateSuiteOptions(parseInt(roomNum), shouldAllocate);
   updateLayoutConfig();
 }
 
-// 取得當前房型啟用的臥房 ID 清單
 function getActiveBedroomIds(roomType) {
   const rooms = ["zhu_wo"];
   if (roomType >= 2) rooms.push("ci_wo_1");
@@ -466,7 +437,6 @@ function getActiveBedroomIds(roomType) {
   return rooms;
 }
 
-// 依房型動態重組「套房數量」選單
 function updateSuiteOptions(roomType, shouldAllocate = true) {
   const suiteSel = document.getElementById("selSuiteCount");
   if (!suiteSel) return;
@@ -478,7 +448,6 @@ function updateSuiteOptions(roomType, shouldAllocate = true) {
   }
   suiteSel.innerHTML = html;
 
-  // 只有在 shouldAllocate 為 true 時，才自動覆寫房間的套房狀態
   if (shouldAllocate) {
     const defaultCount = Math.min(roomType, isNaN(currentVal) ? 1 : currentVal);
     suiteSel.value = defaultCount;
@@ -487,7 +456,6 @@ function updateSuiteOptions(roomType, shouldAllocate = true) {
   updateSpecTitle();
 }
 
-// 依指定數量依序指派套房 (主臥 -> 次臥1 -> 次臥2 -> 次臥3)
 function applySuiteAllocation(count, roomType) {
   getActiveBedroomIds(roomType).forEach((roomId, idx) => {
     const isSuite = idx < count ? 1 : 0;
@@ -502,7 +470,6 @@ function applySuiteAllocation(count, roomType) {
   });
 }
 
-// 手動切換套房數量下拉選單
 function onSuiteCountChange(count) {
   const { roomType } = getCurrentLayoutState();
   applySuiteAllocation(count, roomType);
@@ -510,13 +477,11 @@ function onSuiteCountChange(count) {
   updateSpecTitle();
 }
 
-// 切換 +1 房開關
 function togglePlusOne(checked) {
   updateLayoutConfig();
   updateSpecTitle();
 }
 
-// 一鍵套用最高分 (max) 或最低門檻分 (min)
 function applyExtremePreset(mode) {
   spaces.forEach((sp) => {
     sp.criteria.forEach((crit, critIdx) => {
@@ -536,7 +501,6 @@ function applyExtremePreset(mode) {
   updateSpecTitle();
 }
 
-// 全面還原系統初始預設值
 function resetToDefault() {
   defaultSpacesData.forEach((origSp, spIdx) => {
     const sp = spaces[spIdx];
@@ -577,7 +541,6 @@ function resetToDefault() {
 // 圖表、標題與報表匯出
 // ==========================================
 
-// 計算目前房型規格標籤字串
 function getFormattedRoomSpec() {
   const { roomType, hasPlusOne } = getCurrentLayoutState();
   const suiteSel = document.getElementById("selSuiteCount");
@@ -585,7 +548,6 @@ function getFormattedRoomSpec() {
   return `${roomType}${hasPlusOne ? "+1" : ""}房/${suiteCount}套房`;
 }
 
-// 即時同步網頁標題與規格標籤
 function updateSpecTitle() {
   const specEl = document.getElementById("dispRoomSpec");
   if (specEl) specEl.innerText = getFormattedRoomSpec();
@@ -600,18 +562,15 @@ function updateSpecTitle() {
   document.title = fullTitle;
   try {
     if (window.top && window.top !== window) window.top.document.title = fullTitle;
-  } catch (e) { /* 跨域環境忽略 */ }
+  } catch (e) { }
 }
 
-// 動態更新空間機能指標雷達圖（依房型基準空間常駐顯示，未留設者以 0 分計）
 function updateRadarChart() {
   const canvas = document.getElementById("radarChart");
   if (!canvas || typeof Chart === "undefined") return;
 
   const { roomType, hasPlusOne } = getCurrentLayoutState();
 
-  // 1. 軸向空間過濾：
-  // 凡是「房型啟用的必備基準空間 (isRequired)」OR「使用者有留設且啟用的空間 (sp.userActive !== false)」皆納入雷達圖
   const chartSpaces = spaces.filter(sp => {
     if (!sp.enabled) return false;
     const isRequired = isBaselineRequiredSpace(sp.id, roomType, hasPlusOne);
@@ -620,29 +579,23 @@ function updateRadarChart() {
 
   const labels = chartSpaces.map(sp => sp.name);
 
-  // 2. 計算各空間在雷達圖上的標準分
   const dataValues = chartSpaces.map(sp => {
-    // 關鍵：建商若未留設該空間 (userActive 為 false)，直接以 0 分計
-    if (sp.userActive === false) {
-      return 0;
-    }
+    if (sp.userActive === false) return 0;
 
     const low = parseFloat(document.getElementById(`low_${sp.id}`)?.innerText || 0);
     const high = parseFloat(document.getElementById(`high_${sp.id}`)?.innerText || 1);
     const raw = parseFloat(document.getElementById(`raw_${sp.id}`)?.innerText || 0);
 
+    if (raw === 0) return 0;
     if (high <= low) return 100;
 
-    // 常態換算標準分 (低標60，高標100；低於低標時等比扣減)
     const score = 60.0 + ((raw - low) / (high - low)) * 40.0;
     return Math.max(0, Math.min(100, Math.round(score)));
   });
 
-  // 3. 高標 (100分) 與低標 (60分) 基準線資料
   const highThresholdData = labels.map(() => 100);
   const lowThresholdData = labels.map(() => 60);
 
-  // 4. 定義三組 Dataset
   const chartDatasets = [
     {
       label: "本案評估得分",
@@ -658,7 +611,7 @@ function updateRadarChart() {
       label: "高標滿分線 (100分)",
       data: highThresholdData,
       backgroundColor: "transparent",
-      borderColor: "rgba(22, 163, 74, 0.6)", // 綠色虛線
+      borderColor: "rgba(220, 38, 38, 0.6)",
       borderWidth: 1.5,
       borderDash: [4, 4],
       pointRadius: 0,
@@ -668,7 +621,7 @@ function updateRadarChart() {
       label: "低標合格線 (60分)",
       data: lowThresholdData,
       backgroundColor: "transparent",
-      borderColor: "rgba(220, 38, 38, 0.5)", // 紅色虛線
+      borderColor: "rgba(220, 38, 38, 0.5)",
       borderWidth: 1.5,
       borderDash: [3, 3],
       pointRadius: 0,
@@ -695,7 +648,7 @@ function updateRadarChart() {
         },
         scales: {
           r: {
-            min: 0,   // 設為 0，讓缺項或 0 分空間明確凹陷至中心圓點
+            min: 0,
             max: 100,
             ticks: {
               stepSize: 20,
@@ -723,7 +676,6 @@ function updateRadarChart() {
   }
 }
 
-// 輸出 A4 列印報表 PDF
 function exportReportPDF() {
   const low = document.getElementById("dispLow")?.innerText || "0.0";
   const high = document.getElementById("dispHigh")?.innerText || "0.0";
@@ -790,7 +742,6 @@ function exportReportPDF() {
 // 檔案處理與 JSON 匯入/匯出
 // ==========================================
 
-// 家配圖上傳讀取
 function onFloorPlanUpload(input) {
   if (input.files?.[0]) {
     const reader = new FileReader();
@@ -806,13 +757,11 @@ function onFloorPlanUpload(input) {
   }
 }
 
-// 重新選擇圖片（清空快取）
 function triggerReupload() {
   const ipt = document.getElementById("iptFloorPlan");
   if (ipt) { ipt.value = ""; ipt.click(); }
 }
 
-// 移除當前家配圖
 function removeFloorPlan() {
   const img = document.getElementById("imgFloorPlan");
   const placeholder = document.getElementById("planPlaceholder");
@@ -825,7 +774,6 @@ function removeFloorPlan() {
   if (actions) actions.style.display = "none";
 }
 
-// AI 匯入彈窗開關
 function importFromAI() {
   const modal = document.getElementById("aiModal");
   const textarea = document.getElementById("iptAiJson");
@@ -838,7 +786,6 @@ function closeAiModal() {
   if (modal) modal.style.display = "none";
 }
 
-// 解析 JSON 數據並同步載入全系統
 function confirmImportFromAI() {
   const textarea = document.getElementById("iptAiJson");
   if (!textarea || !textarea.value.trim()) {
@@ -850,7 +797,6 @@ function confirmImportFromAI() {
     const cleanText = textarea.value.trim().replace(/[\u00A0\u1680\u180E\u2000-\u200B\u202F\u205F\u3000\uFEFF]/g, ' ');
     const data = JSON.parse(cleanText);
 
-    // 1. 基本文字與房型設定
     if (data.projectName !== undefined) document.getElementById("iptProjectName").value = data.projectName;
     if (data.unitNumber !== undefined) document.getElementById("iptUnitNumber").value = data.unitNumber;
     if (data.roomType !== undefined) setPreset(String(data.roomType), false);
@@ -865,7 +811,6 @@ function confirmImportFromAI() {
       if (el) el.value = data.conclusion;
     }
 
-    // 2. 先重設所有空間為啟用狀態，確保乾淨環境
     spaces.forEach(sp => {
       sp.userActive = true;
       const chk = document.getElementById(`toggle_${sp.id}`);
@@ -877,7 +822,6 @@ function confirmImportFromAI() {
       }
     });
 
-    // 3. 停用建商未規劃之空間
     if (Array.isArray(data.disabledSpaces)) {
       data.disabledSpaces.forEach(spaceId => {
         const chk = document.getElementById(`toggle_${spaceId}`);
@@ -886,7 +830,6 @@ function confirmImportFromAI() {
       });
     }
 
-    // 4. 將 JSON 中完整的各空間指標選項（selections）安全填入
     if (data.selections) {
       Object.keys(data.selections).forEach(spaceId => {
         const sp = spaces.find(s => s.id === spaceId);
@@ -901,13 +844,11 @@ function confirmImportFromAI() {
       });
     }
 
-    // 5. 【關鍵修改】在所有指標都就定位後，僅單純更新套房下拉選單數值，不再呼叫 onSuiteCountChange 進行覆寫
     if (data.suiteCount !== undefined) {
       const selSuite = document.getElementById("selSuiteCount");
       if (selSuite) selSuite.value = data.suiteCount;
     }
 
-    // 6. 全資料就緒後，一次性統一更新全域排版、標題與計分
     updateLayoutConfig();
     updateSpecTitle();
     closeAiModal();
@@ -918,7 +859,6 @@ function confirmImportFromAI() {
   }
 }
 
-// 匯出當前系統狀態為 TXT 文字檔案
 function exportCurrentJSON() {
   try {
     const { roomType, hasPlusOne } = getCurrentLayoutState();
@@ -939,14 +879,12 @@ function exportCurrentJSON() {
 
     const jsonString = JSON.stringify(exportData, null, 2);
 
-    // 取得建案名稱、戶號與當前日期作為預設下載檔名
     const projectName = getIptVal("iptProjectName", "未指定建案");
     const unitNumber = getIptVal("iptUnitNumber", "未指定戶號");
     const now = new Date();
     const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
     const fileName = `${dateStr}_${projectName}_${unitNumber}_評估代碼.txt`;
 
-    // 建立文字 Blob 並觸發瀏覽器原生下載
     const blob = new Blob([jsonString], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -963,7 +901,7 @@ function exportCurrentJSON() {
 }
 
 // ==========================================
-// 全域掛載 (供 HTML 行內事件調用)
+// 全域掛載
 // ==========================================
 
 window.triggerReupload = triggerReupload;
