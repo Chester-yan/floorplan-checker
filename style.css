@@ -52,6 +52,7 @@ p.subtitle { color: var(--text-muted); font-size: 0.9rem; }
 
 .btn-action { background: #0f172a; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: background 0.2s; }
 .btn-action:hover { background: #334155; }
+.card { background: white; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 16px; padding: 16px; }
 
 /* 列印與另存 PDF 專用樣式 */
 @page {
@@ -60,6 +61,11 @@ p.subtitle { color: var(--text-muted); font-size: 0.9rem; }
 }
 
 @media print {
+  .container {
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
   * {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
