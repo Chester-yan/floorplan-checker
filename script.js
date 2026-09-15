@@ -4,12 +4,12 @@
 
 let radarChartInstance = null;
 
-// 各房型必備空間固定權重配置表 (加總均為 100 分)
+// 各房型必備空間固定權重配置表 (加總均嚴格鎖定為 100 分)
 const SPACE_WEIGHTS = {
-  1: { ke_ting: 20, can_ting: 12, chu_fang: 16, yang_tai: 12, zhu_wo: 22, ke_yu: 18 },
-  2: { xuan_guan: 8, ke_ting: 17, can_ting: 12, chu_fang: 14, yang_tai: 10, zhu_wo: 18, ke_yu: 17, ci_wo_1: 14 },
-  3: { xuan_guan: 6, ke_ting: 14, can_ting: 11, chu_fang: 11, yang_tai: 8, zhu_wo: 14, zhu_wo_bath: 10, ke_yu: 12, ci_wo_1: 9, ci_wo_2: 9 },
-  4: { xuan_guan: 6, ke_ting: 13, can_ting: 11, chu_fang: 10, yang_tai: 7, zhu_wo: 13, zhu_wo_bath: 10, ke_yu: 11, ci_wo_1: 8, ci_wo_2: 7, ci_wo_3: 7 }
+  1: { ke_ting: 20, can_ting: 12, chu_fang: 16, yang_tai: 12, zhu_wo: 22, ke_yu: 18 }, // 20+12+16+12+22+18 = 100
+  2: { xuan_guan: 8, ke_ting: 15, can_ting: 11, chu_fang: 13, yang_tai: 9, zhu_wo: 16, ke_yu: 15, ci_wo_1: 13 },     // 8+15+11+13+9+16+15+13 = 100
+  3: { xuan_guan: 6, ke_ting: 13, can_ting: 10, chu_fang: 10, yang_tai: 8, zhu_wo: 13, zhu_wo_bath: 10, ke_yu: 11, ci_wo_1: 9, ci_wo_2: 10 }, // 6+13+10+10+8+13+10+11+9+10 = 100
+  4: { xuan_guan: 6, ke_ting: 12, can_ting: 10, chu_fang: 10, yang_tai: 7, zhu_wo: 12, zhu_wo_bath: 10, ke_yu: 10, ci_wo_1: 8, ci_wo_2: 8, ci_wo_3: 7 }  // 6+12+10+10+7+12+10+10+8+8+7 = 100
 };
 
 // 通用浴室選項範本 (8項指標 - 全衛浴無乾濕分離改為 0 分)
