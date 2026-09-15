@@ -415,6 +415,8 @@ function calculateAll() {
   let totalBaseScore = 0.0;
   let totalBonusScore = 0.0;
   let rawSum = 0.0;
+  let totalLowSum = 0.0;   // 1. 低標分數加總累加器
+  let totalHighSum = 0.0;  // 2. 高標分數加總累加器
 
   spaces.forEach((sp) => {
     let spLow = 0, spHigh = 0, spRaw = 0;
@@ -445,6 +447,12 @@ function calculateAll() {
     // 只要出現 not ok，該空間實得分數直接歸 0
     if (hasNotOk) {
       spRaw = 0;
+    }
+
+    // 累積全案當前啟用空間的低標總和與高標總和
+    if (sp.enabled && sp.userActive !== false) {
+      totalLowSum += spLow;
+      totalHighSum += spHigh;
     }
 
     // 計算空間內部得分率 (0.0 ~ 1.0)
@@ -482,15 +490,16 @@ function calculateAll() {
     if (elRaw) elRaw.innerText = (sp.enabled && sp.userActive !== false ? spRaw : 0).toFixed(1);
   });
 
-  // 表頭數據呈現
-  const dispLow = document.getElementById("dispLow");
-  const dispHigh = document.getElementById("dispHigh");
+  // 四個關鍵數字的 DOM 呈現綁定
+  const dispLowSum = document.getElementById("dispLowSum");
+  const dispHighSum = document.getElementById("dispHighSum");
   const dispRaw = document.getElementById("dispRaw");
-  if (dispLow) dispLow.innerText = "60.0";   // 基準及格門檻固定為 60.0
-  if (dispHigh) dispHigh.innerText = "100.0"; // 必備空間高標滿分固定為 100.0
-  if (dispRaw) dispRaw.innerText = rawSum.toFixed(1);
+  
+  if (dispLowSum) dispLowSum.innerText = totalLowSum.toFixed(1);   // 1. 低標分數加總
+  if (dispHighSum) dispHighSum.innerText = totalHighSum.toFixed(1); // 2. 高標分數加總
+  if (dispRaw) dispRaw.innerText = rawSum.toFixed(1);             // 3. 實得分數加總
 
-  // 最終得分 = 必備空間加權總分 + 外加加分
+  // 4. 轉換百分制之分數（最終綜合得分 = 必備加權總分 + 外加加分）
   const finalScore = totalBaseScore + totalBonusScore;
 
   const finalEl = document.getElementById("dispFinal");
