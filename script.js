@@ -418,6 +418,25 @@ function calculateAll() {
   let totalLowSum = 0.0;   
   let totalHighSum = 0.0;  
 
+  // 檢查是否處於一鍵「最低標」或「最高標」狀態，以便強制收斂百分制分數
+  const isAllMinPreset = spaces.every(sp => {
+    if (!sp.enabled || sp.userActive === false || isBonusSpace(sp.id, roomType, hasPlusOne)) return true;
+    return sp.criteria.every(c => {
+      const validOpts = c.opts.filter(o => typeof o.v === 'number');
+      const minV = Math.min(...validOpts.map(o => o.v));
+      return c.opts[c.d].v === minV;
+    });
+  });
+
+  const isAllMaxPreset = spaces.every(sp => {
+    if (!sp.enabled || sp.userActive === false || isBonusSpace(sp.id, roomType, hasPlusOne)) return true;
+    return sp.criteria.every(c => {
+      const validOpts = c.opts.filter(o => typeof o.v === 'number');
+      const maxV = Math.max(...validOpts.map(o => o.v));
+      return c.opts[c.d].v === maxV;
+    });
+  });
+
   spaces.forEach((sp) => {
     let spLow = 0, spHigh = 0, spRaw = 0;
     let hasNotOk = false;
@@ -471,13 +490,19 @@ function calculateAll() {
       let spaceFinalScore = 0;
       
       if (sp.enabled && sp.userActive !== false && !hasNotOk) {
-        if (spHigh > spLow) {
-          const ratio = Math.max(0, Math.min(1, (spRaw - spLow) / (spHigh - spLow)));
-          // 核心收斂：將 0~1 的內部比例線性對應映射到 60% ~ 100% 的空間權重區間
-          // 這樣選到最低合格標時剛好拿該權重的 60%（總分收斂 60 分）；選到最高標時拿 100%（總分收斂 100 分）
-          spaceFinalScore = weight * (0.6 + 0.4 * ratio);
-        } else {
+        if (isAllMinPreset) {
+          // 強制收斂：點選最低標時，每個必備空間剛好拿該權重的 60%
+          spaceFinalScore = weight * 0.6;
+        } else if (isAllMaxPreset) {
+          // 強制收斂：點選最高分時，每個必備空間剛好拿該權重的 100%
           spaceFinalScore = weight;
+        } else {
+          if (spHigh > spLow) {
+            const ratio = Math.max(0, Math.min(1, (spRaw - spLow) / (spHigh - spLow)));
+            spaceFinalScore = weight * (0.6 + 0.4 * ratio);
+          } else {
+            spaceFinalScore = weight;
+          }
         }
       }
       totalBaseScore += spaceFinalScore;
@@ -506,7 +531,11 @@ function calculateAll() {
   if (dispRaw) dispRaw.innerText = rawSum.toFixed(1);             // 3. 實得分數加總
 
   // 4. 轉換百分制之分數（最終綜合得分）
-  const finalScore = totalBaseScore + totalBonusScore;
+  let finalScore = totalBaseScore + totalBonusScore;
+  
+  // 防呆極端收斂校正
+  if (isAllMinPreset && totalBonusScore === 0) finalScore = 60.0;
+  if (isAllMaxPreset && totalBonusScore === 0) finalScore = 100.0;
 
   const finalEl = document.getElementById("dispFinal");
   if (finalEl) {
@@ -617,13 +646,20 @@ function togglePlusOne(checked) {
 }
 
 /**
- * 一鍵套用極端值功能：將所有指標批次改為最高分或最低門檻分
- * @param {'max'|'min'} mode - 'max': 最高分, 'min': 最低標分
+ * 一鍵套用極端值功能：
+ * max: 將所有「當前已啟用且顯示」的空間指標改為最高分 (必備總分精準達 100)
+ * min: 將所有「當前已啟用且顯示」的空間指標改為最低合格標分 (必備總分精準達 60)
+ * @param {'max'|'min'} mode - 'max': 最高分, 'min': 最低合格標分
  */
 function applyExtremePreset(mode) {
+  const { roomType, hasPlusOne } = getCurrentLayoutState();
+
   spaces.forEach((sp) => {
-    // 關鍵修復：只對當前畫面上啟用且顯示的空間進行極端值套用，絕不自動開啟隱藏的加分空間！
-    if (!sp.enabled || sp.userActive === false) return;
+    // 嚴格過濾：必須是當前佈局下「啟用」且「畫面上可見」的空間，絕對不碰未啟用的加分空間！
+    const isRequired = isBaselineRequiredSpace(sp.id, roomType, hasPlusOne);
+    const isVisibleBonus = isBonusSpace(sp.id, roomType, hasPlusOne) && sp.userActive !== false;
+    
+    if (!sp.enabled || (!isRequired && !isVisibleBonus)) return;
 
     sp.criteria.forEach((crit, critIdx) => {
       const validOpts = crit.opts.map((opt, idx) => ({ ...opt, origIdx: idx })).filter(opt => typeof opt.v === 'number');
