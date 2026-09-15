@@ -600,8 +600,13 @@ function updateRadarChart() {
     if (high <= low) return 100;
 
     const score = 60.0 + ((raw - low) / (high - low)) * 40.0;
-    return Math.max(0, Math.min(100, Math.round(score)));
+    // 移除 Math.min(100)，允許單項機能突出時突破 100 分
+    return Math.max(0, Math.round(score));
   });
+
+  // 動態計算坐標軸最高刻度，若有項目破百則向上延展
+  const maxVal = Math.max(...dataValues, 100);
+  const dynamicMax = Math.ceil(maxVal / 20) * 20;
 
   const highThresholdData = labels.map(() => 100);
   const lowThresholdData = labels.map(() => 60);
@@ -621,7 +626,7 @@ function updateRadarChart() {
       label: "高標滿分線 (100分)",
       data: highThresholdData,
       backgroundColor: "transparent",
-      borderColor: "rgba(22, 163, 74, 0.6)",
+      borderColor: "rgba(22, 163, 74, 0.6)", // 翠綠色高標線
       borderWidth: 1.5,
       borderDash: [4, 4],
       pointRadius: 0,
@@ -631,7 +636,7 @@ function updateRadarChart() {
       label: "低標合格線 (60分)",
       data: lowThresholdData,
       backgroundColor: "transparent",
-      borderColor: "rgba(220, 38, 38, 0.5)",
+      borderColor: "rgba(220, 38, 38, 0.5)", // 紅色低標線
       borderWidth: 1.5,
       borderDash: [3, 3],
       pointRadius: 0,
@@ -642,6 +647,7 @@ function updateRadarChart() {
   if (radarChartInstance) {
     radarChartInstance.data.labels = labels;
     radarChartInstance.data.datasets = chartDatasets;
+    radarChartInstance.options.scales.r.max = dynamicMax;
     radarChartInstance.update();
   } else {
     radarChartInstance = new Chart(canvas.getContext("2d"), {
@@ -659,7 +665,7 @@ function updateRadarChart() {
         scales: {
           r: {
             min: 0,
-            max: 100,
+            max: dynamicMax,
             ticks: {
               stepSize: 20,
               font: { size: 10 }
