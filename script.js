@@ -70,7 +70,7 @@ let spaces = [
       { name: "座椅移動空間", opts: [{ l: "<70cm", v: "not ok" }, { l: ">70cm", v: 0.6 }, { l: ">75cm", v: 0.8 }, { l: ">80cm", v: 1.0 }, { l: ">90cm", v: 1.2 }], d: 3 }
     ]
   },
-  {
+{
     id: "chu_fang", name: "廚房", enabled: true,
     criteria: [
       { name: "檯面深度", opts: [{ l: "<60cm", v: 0 }, { l: ">60cm", v: 1.0 }], d: 1 },
@@ -78,12 +78,11 @@ let spaces = [
       { name: "走道淨寬", opts: [{ l: "<70cm", v: "not ok" }, { l: ">70cm", v: 0.6 }, { l: ">80cm", v: 1.0 }, { l: ">90cm", v: 1.2 }], d: 2 },
       { name: "排油煙路徑", opts: [{ l: ">5m", v: 0.6 }, { l: "<5m", v: 0.8 }, { l: "<1m", v: 1.0 }], d: 2 },
       { name: "留設電器櫃位置", opts: [{ l: "無電器櫃", v: 0 }, { l: "有", v: 1.0 }], d: 1 },
-      { name: "設置中島", opts: [{ l: "未設置", v: 0 }, { l: "有設置", v: 1.0 }], d: 0 },
       { name: "是否連接工作陽台", opts: [{ l: "無連接", v: 0 }, { l: "有連接", v: 1.0 }], d: 0 }
     ]
   },
-  {
-    id: "zhong_dao", name: "中島空間", enabled: false,
+{
+    id: "zhong_dao", name: "中島空間", enabled: true, // 改為預設顯示，供使用者自由勾選加分
     criteria: [
       { name: "中島檯面長度", opts: [{ l: "<120cm", v: 0.6 }, { l: "120~180cm", v: 1.0 }, { l: ">180cm", v: 1.2 }], d: 1 },
       { name: "中島檯面深度", opts: [{ l: "<60cm", v: "not ok" }, { l: "60~80cm", v: 1.0 }, { l: ">80cm", v: 1.2 }], d: 1 },
@@ -346,9 +345,9 @@ function updateLayoutConfig() {
   setEnable("ci_wo_3_bath", roomType >= 4 && checkIsSuite("ci_wo_3"));
 
   setEnable("plus_one", hasPlusOne);
-  const kitchen = spaces.find(s => s.id === "chu_fang");
-  const islandOpt = kitchen ? kitchen.criteria.find(c => c.name === "設置中島") : null;
-  setEnable("zhong_dao", islandOpt ? islandOpt.opts[islandOpt.d]?.l === "有設置" : false);
+  
+// 中島空間改為獨立常態顯示的加分卡片，由使用者自行決定是否勾選啟用
+  setEnable("zhong_dao", true);
 
   calculateAll();
 }
