@@ -621,7 +621,7 @@ function updateRadarChart() {
       label: "高標滿分線 (100分)",
       data: highThresholdData,
       backgroundColor: "transparent",
-      borderColor: "rgba(220, 38, 38, 0.6)",
+      borderColor: "rgba(22, 163, 74, 0.6)",
       borderWidth: 1.5,
       borderDash: [4, 4],
       pointRadius: 0,
