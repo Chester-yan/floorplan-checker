@@ -334,7 +334,7 @@ function isBonusSpace(spaceId, roomType, hasPlusOne) {
 function calculateAll() {
   const { roomType, hasPlusOne } = getCurrentLayoutState();
   let baseLow = 0, baseHigh = 0, baseRaw = 0;
-  let bonusRaw = 0, bonusHigh = 0;
+  let bonusRaw = 0;
 
   spaces.forEach((sp) => {
     let spLow = 0, spHigh = 0, spRaw = 0;
@@ -368,19 +368,21 @@ function calculateAll() {
     }
 
     if (isBonus) {
+      // 加分空間：僅在實際留設啟用時累計「實得分數」，高標滿分完全不計入動態高標分母
       if (sp.enabled && sp.userActive !== false) {
         bonusRaw += spRaw;
-        bonusHigh += spHigh;
       }
     } else {
-    // 凡是必備空間，無論有無被取消勾選/停用，低標與高標分母 100% 完整計入
-    if (isRequired) {
-      baseLow += spLow;
-      baseHigh += spHigh;
-    } else if (sp.enabled && sp.userActive !== false) {
-      // 非必備之常態空間（如高房型次臥、套浴等），有啟用才計入高標
-      baseHigh += spHigh;
-    }
+      // 基準必備空間：無論建商有無留設（userActive），低標與高標分母 100% 強制計入
+      if (isRequired) {
+        baseLow += spLow;
+        baseHigh += spHigh;
+      } else if (sp.enabled && sp.userActive !== false) {
+        // 非必備之常態空間（如主臥套浴），有啟用才累計高標
+        baseHigh += spHigh;
+      }
+
+      // 實得分數：實際有留設且啟用才累計
       if (sp.enabled && sp.userActive !== false) {
         baseRaw += spRaw;
       }
@@ -398,7 +400,8 @@ function calculateAll() {
   const dispHigh = document.getElementById("dispHigh");
   const dispRaw = document.getElementById("dispRaw");
   if (dispLow) dispLow.innerText = baseLow.toFixed(1);
-  if (dispHigh) dispHigh.innerText = (baseHigh + bonusHigh).toFixed(1);
+  // 動態高標只反映標準必備空間的滿分門檻，不納入加分空間
+  if (dispHigh) dispHigh.innerText = baseHigh.toFixed(1);
   if (dispRaw) dispRaw.innerText = (baseRaw + bonusRaw).toFixed(1);
 
   let baseScore = 60.0;
@@ -406,6 +409,7 @@ function calculateAll() {
     baseScore = 60.0 + ((baseRaw - baseLow) / (baseHigh - baseLow)) * 40.0;
   }
 
+  // 加分空間轉化為標準分的加分點數：以標準空間的量尺 (baseHigh - baseLow) 作為基準權重
   let bonusScore = 0.0;
   if (baseHigh > baseLow && bonusRaw > 0) {
     bonusScore = (bonusRaw / (baseHigh - baseLow)) * 40.0;
