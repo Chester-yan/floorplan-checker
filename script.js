@@ -4,6 +4,14 @@
 
 let radarChartInstance = null;
 
+// 各房型必備空間固定權重配置表 (加總均為 100 分)
+const SPACE_WEIGHTS = {
+  1: { ke_ting: 20, can_ting: 12, chu_fang: 16, yang_tai: 12, zhu_wo: 22, ke_yu: 18 },
+  2: { xuan_guan: 8, ke_ting: 17, can_ting: 12, chu_fang: 14, yang_tai: 10, zhu_wo: 18, ke_yu: 17, ci_wo_1: 14 },
+  3: { xuan_guan: 6, ke_ting: 14, can_ting: 11, chu_fang: 11, yang_tai: 8, zhu_wo: 14, zhu_wo_bath: 10, ke_yu: 12, ci_wo_1: 9, ci_wo_2: 9 },
+  4: { xuan_guan: 6, ke_ting: 13, can_ting: 11, chu_fang: 10, yang_tai: 7, zhu_wo: 13, zhu_wo_bath: 10, ke_yu: 11, ci_wo_1: 8, ci_wo_2: 7, ci_wo_3: 7 }
+};
+
 // 通用浴室選項範本 (8項指標 - 全衛浴無乾濕分離改為 0 分)
 const bathCriteriaTemplate = [
   { name: "開窗", opts: [{ l: "無開窗", v: 0 }, { l: "有開窗", v: 1.0 }], d: 0 },
@@ -323,13 +331,16 @@ function toggleSpaceActive(spaceId, isActive) {
 function updateLayoutConfig() {
   const { roomType, hasPlusOne } = getCurrentLayoutState();
 
-  ["xuan_guan", "ke_ting", "can_ting", "chu_fang", "yang_tai", "zhu_wo", "ke_yu"].forEach(id => setEnable(id, true));
+  ["ke_ting", "can_ting", "chu_fang", "yang_tai", "zhu_wo", "ke_yu"].forEach(id => setEnable(id, true));
+  setEnable("xuan_guan", true);
+
+  // 3 房以上主臥套浴為必備基準，常態顯示卡片；1 房與 2 房有勾選套房才顯示
+  setEnable("zhu_wo_bath", roomType >= 3 ? true : checkIsSuite("zhu_wo"));
 
   setEnable("ci_wo_1", roomType >= 2);
   setEnable("ci_wo_2", roomType >= 3);
   setEnable("ci_wo_3", roomType >= 4);
 
-  setEnable("zhu_wo_bath", checkIsSuite("zhu_wo"));
   setEnable("ci_wo_1_bath", roomType >= 2 && checkIsSuite("ci_wo_1"));
   setEnable("ci_wo_2_bath", roomType >= 3 && checkIsSuite("ci_wo_2"));
   setEnable("ci_wo_3_bath", roomType >= 4 && checkIsSuite("ci_wo_3"));
@@ -347,56 +358,64 @@ function updateLayoutConfig() {
 // ==========================================
 
 /**
- * 判定指定空間是否為當前格局的「法定/必備基準空間」(分母鎖定依據)
- * @param {string} spaceId - 空間識別碼
- * @param {number} roomType - 房型數量 (1~4)
- * @param {boolean} hasPlusOne - 是否有 +1 房
- * @returns {boolean} true: 為基準必備空間 (未配置需受低標/高標懲罰), false: 非必備空間
+ * 判定指定空間是否為當前格局的「必備基準空間」
  */
 function isBaselineRequiredSpace(spaceId, roomType, hasPlusOne) {
   if (spaceId === "xuan_guan") return roomType >= 2 || (roomType === 1 && hasPlusOne);
   if (spaceId === "ci_wo_1") return roomType >= 2;
   if (spaceId === "ci_wo_2") return roomType >= 3;
   if (spaceId === "ci_wo_3") return roomType >= 4;
+  // 僅 3 房以上主臥套浴強制為必備
+  if (spaceId === "zhu_wo_bath") return roomType >= 3;
 
   const coreSpaces = ["ke_ting", "can_ting", "chu_fang", "yang_tai", "zhu_wo", "ke_yu"];
   return coreSpaces.includes(spaceId);
 }
 
 /**
- * 判定指定空間是否屬於「純加分空間」(得分計入分子，但滿分不膨脹高標分母)
- * @param {string} spaceId - 空間識別碼
- * @param {number} roomType - 房型數量 (1~4)
- * @param {boolean} hasPlusOne - 是否有 +1 房
- * @returns {boolean} true: 純加分空間 (如 1 房玄關、1 房主衛、2 房以上次臥套浴)
+ * 判定指定空間是否屬於「純加分空間」(不佔必備分母，外加突破 100 分)
  */
 function isBonusSpace(spaceId, roomType, hasPlusOne) {
-  // 1 房未 +1 時，玄關為純加分
+  // 1 房未 +1 時，玄關為加分項
   if (roomType === 1 && !hasPlusOne && spaceId === "xuan_guan") {
     return true;
   }
-  // 1 房若額外規劃主臥套房衛浴（雙衛浴規格），視為純加分空間
-  if (roomType === 1 && spaceId === "zhu_wo_bath") {
-    return true;
-  }
-  // 2 房以上次臥專屬套浴，一律視為純加分空間
+  // 2 房主臥若有套房衛浴，視為加分項目
+  if (roomType === 2 && spaceId === "zhu_wo_bath") return true;
+  // 2 房以上之次臥專屬套浴 (次衛 1/2/3) 為加分項
   const secondarySuiteBaths = ["ci_wo_1_bath", "ci_wo_2_bath", "ci_wo_3_bath"];
   if (roomType >= 2 && secondarySuiteBaths.includes(spaceId)) {
+    return true;
+  }
+  // 獨立中島空間為加分項
+  if (spaceId === "zhong_dao") {
     return true;
   }
   return false;
 }
 
 /**
- * 全案評分引擎核心：
- * 1. 計算各空間理論低標、高標與實得分數
- * 2. 執行 not ok 空間實得分數直接歸零懲罰
- * 3. 隔離加分空間分母，換算標準分 (60~100 分量表) 並更新介面與雷達圖
+ * 取得加分空間的最高外加點數上限
+ */
+function getBonusMaxScore(spaceId, roomType) {
+  if (spaceId === "xuan_guan" && roomType === 1) return 8.0;
+  // 2 房規劃主臥套浴給予最高 +8 分突破獎勵
+  if (spaceId === "zhu_wo_bath" && roomType === 2) return 8.0;
+  if (["ci_wo_1_bath", "ci_wo_2_bath", "ci_wo_3_bath"].includes(spaceId)) return 6.0;
+  if (spaceId === "zhong_dao") return 6.0;
+  return 0.0;
+}
+
+/**
+ * 全案評分引擎核心 (空間權重分配制)
  */
 function calculateAll() {
   const { roomType, hasPlusOne } = getCurrentLayoutState();
-  let baseLow = 0, baseHigh = 0, baseRaw = 0;
-  let bonusRaw = 0;
+  const currentWeights = SPACE_WEIGHTS[roomType] || SPACE_WEIGHTS[2];
+
+  let totalBaseScore = 0.0;
+  let totalBonusScore = 0.0;
+  let rawSum = 0.0;
 
   spaces.forEach((sp) => {
     let spLow = 0, spHigh = 0, spRaw = 0;
@@ -429,27 +448,33 @@ function calculateAll() {
       spRaw = 0;
     }
 
-    if (isBonus) {
-      // 加分空間：僅在實際留設啟用時累計「實得分數」，高標滿分完全不計入動態高標分母
-      if (sp.enabled && sp.userActive !== false) {
-        bonusRaw += spRaw;
-      }
-    } else {
-      // 基準必備空間：無論建商有無留設（userActive），低標與高標分母 100% 強制計入
-      if (isRequired) {
-        baseLow += spLow;
-        baseHigh += spHigh;
-      } else if (sp.enabled && sp.userActive !== false) {
-        // 非必備之常態空間（如主臥套浴），有啟用才累計高標
-        baseHigh += spHigh;
-      }
-
-      // 實得分數：實際有留設且啟用才累計
-      if (sp.enabled && sp.userActive !== false) {
-        baseRaw += spRaw;
+    // 計算空間內部得分率 (0.0 ~ 1.0)
+    let spRatio = 0.0;
+    if (sp.enabled && sp.userActive !== false && spRaw > 0) {
+      if (spHigh > spLow) {
+        spRatio = Math.max(0, Math.min(1, (spRaw - spLow) / (spHigh - spLow)));
+      } else {
+        spRatio = 1.0;
       }
     }
 
+    if (isBonus) {
+      // 加分空間：依內部得分率折算外加分數
+      const maxBonus = getBonusMaxScore(sp.id, roomType);
+      totalBonusScore += (spRatio * maxBonus);
+      if (sp.enabled && sp.userActive !== false) {
+        rawSum += spRaw;
+      }
+    } else {
+      // 必備空間：依權重分配表折算分數 (未規劃或 not ok 則 spRatio 為 0，直接損失該權重)
+      const weight = currentWeights[sp.id] || 0;
+      totalBaseScore += (spRatio * weight);
+      if (sp.enabled && sp.userActive !== false) {
+        rawSum += spRaw;
+      }
+    }
+
+    // 更新卡片右上角數據
     const elLow = document.getElementById(`low_${sp.id}`);
     const elHigh = document.getElementById(`high_${sp.id}`);
     const elRaw = document.getElementById(`raw_${sp.id}`);
@@ -458,26 +483,16 @@ function calculateAll() {
     if (elRaw) elRaw.innerText = (sp.enabled && sp.userActive !== false ? spRaw : 0).toFixed(1);
   });
 
+  // 表頭數據呈現
   const dispLow = document.getElementById("dispLow");
   const dispHigh = document.getElementById("dispHigh");
   const dispRaw = document.getElementById("dispRaw");
-  if (dispLow) dispLow.innerText = baseLow.toFixed(1);
-  // 動態高標只反映標準必備空間的滿分門檻，不納入加分空間
-  if (dispHigh) dispHigh.innerText = baseHigh.toFixed(1);
-  if (dispRaw) dispRaw.innerText = (baseRaw + bonusRaw).toFixed(1);
+  if (dispLow) dispLow.innerText = "60.0";   // 基準及格門檻固定為 60.0
+  if (dispHigh) dispHigh.innerText = "100.0"; // 必備空間高標滿分固定為 100.0
+  if (dispRaw) dispRaw.innerText = rawSum.toFixed(1);
 
-  let baseScore = 60.0;
-  if (baseHigh > baseLow) {
-    baseScore = 60.0 + ((baseRaw - baseLow) / (baseHigh - baseLow)) * 40.0;
-  }
-
-  // 加分空間轉化為標準分的加分點數：以標準空間的量尺 (baseHigh - baseLow) 作為基準權重
-  let bonusScore = 0.0;
-  if (baseHigh > baseLow && bonusRaw > 0) {
-    bonusScore = (bonusRaw / (baseHigh - baseLow)) * 40.0;
-  }
-
-  let finalScore = Math.max(0, baseScore + bonusScore);
+  // 最終得分 = 必備空間加權總分 + 外加加分
+  const finalScore = totalBaseScore + totalBonusScore;
 
   const finalEl = document.getElementById("dispFinal");
   if (finalEl) {
@@ -539,8 +554,8 @@ function updateSuiteOptions(roomType, shouldAllocate = true) {
   suiteSel.innerHTML = html;
 
   if (shouldAllocate) {
-    // 只要切換房型：1 房強制預設 0 套 (全雅房)；2 房以上預設 1 套
-    const defaultCount = (roomType === 1) ? 0 : 1;
+    // 1 房與 2 房預設 0 套 (單衛標準配置)；3 房以上預設 1 套 (主臥套房)
+    const defaultCount = (roomType <= 2) ? 0 : 1;
     suiteSel.value = defaultCount;
     applySuiteAllocation(defaultCount, roomType);
   }
@@ -683,7 +698,7 @@ function updateSpecTitle() {
 
 /**
  * 繪製或更新 Chart.js 雷達圖：
- * 1. 標準空間最高停留在 100 分綠線
+ * 1. 標準必備空間依內部得分率滿分對齊 100 分綠線
  * 2. 加分空間高分時自 100 分起跳突破加分 (最高 140)
  * 3. 坐標軸刻度因應破百項目動態向外擴展
  */
@@ -713,13 +728,13 @@ function updateRadarChart() {
 
     if (isBonus) {
       // 加分空間：具備此機能即突破 100 分，依得分表現向外延展至 140 分
-      const bonusRate = high > 0 ? (raw / high) : 1;
+      const bonusRate = (high > low) ? Math.max(0, Math.min(1, (raw - low) / (high - low))) : 1.0;
       return Math.round(100 + bonusRate * 40);
     } else {
-      // 標準基準空間：滿分鎖定在 100 分綠線
+      // 標準基準空間：依內部得分率對齊 0～100 分量尺
       if (high <= low) return 100;
-      const score = 60.0 + ((raw - low) / (high - low)) * 40.0;
-      return Math.max(0, Math.min(100, Math.round(score)));
+      const ratio = Math.max(0, Math.min(1, (raw - low) / (high - low)));
+      return Math.round(ratio * 100);
     }
   });
 
@@ -815,8 +830,8 @@ function updateRadarChart() {
  * 產生列印版面摘要資訊盒並調用瀏覽器列印對話框 (PDF 報表匯出)
  */
 function exportReportPDF() {
-  const low = document.getElementById("dispLow")?.innerText || "0.0";
-  const high = document.getElementById("dispHigh")?.innerText || "0.0";
+  const low = document.getElementById("dispLow")?.innerText || "60.0";
+  const high = document.getElementById("dispHigh")?.innerText || "100.0";
   const raw = document.getElementById("dispRaw")?.innerText || "0.0";
   const finalEl = document.getElementById("dispFinal");
   const final = finalEl ? finalEl.innerText : "60.0";
@@ -852,19 +867,19 @@ function exportReportPDF() {
     </div>
     <div style="display: flex; gap: 24px; align-items: center;">
       <div style="display: flex; flex-direction: column; text-align: left;">
-        <span style="font-size: 0.78rem; color: #64748b; margin-bottom: 2px;">動態低標門檻</span>
+        <span style="font-size: 0.78rem; color: #64748b; margin-bottom: 2px;">合格門檻線</span>
         <span style="font-size: 1.25rem; font-weight: 700; color: #1e293b;">${low}</span>
       </div>
       <div style="display: flex; flex-direction: column; text-align: left;">
-        <span style="font-size: 0.78rem; color: #64748b; margin-bottom: 2px;">動態高標滿分</span>
+        <span style="font-size: 0.78rem; color: #64748b; margin-bottom: 2px;">基準滿分線</span>
         <span style="font-size: 1.25rem; font-weight: 700; color: #1e293b;">${high}</span>
       </div>
       <div style="display: flex; flex-direction: column; text-align: left;">
-        <span style="font-size: 0.78rem; color: #64748b; margin-bottom: 2px;">原始實得分數</span>
+        <span style="font-size: 0.78rem; color: #64748b; margin-bottom: 2px;">累計實得點數</span>
         <span style="font-size: 1.25rem; font-weight: 700; color: #1e293b;">${raw}</span>
       </div>
       <div style="display: flex; flex-direction: column; text-align: left;">
-        <span style="font-size: 0.78rem; color: #64748b; margin-bottom: 2px;">標準分 (60～100分)</span>
+        <span style="font-size: 0.78rem; color: #64748b; margin-bottom: 2px;">全案綜合得分</span>
         <div style="display: flex; align-items: baseline; gap: 4px;">
           <span style="font-size: 2rem; font-weight: 800; color: ${finalColor}; line-height: 1;">${final}</span>
           <span style="font-size: 0.9rem; color: #64748b; font-weight: 600;">分</span>
