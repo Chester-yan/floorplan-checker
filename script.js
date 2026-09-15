@@ -82,7 +82,7 @@ let spaces = [
     ]
   },
 {
-    id: "zhong_dao", name: "中島空間", enabled: true, // 改為預設顯示，供使用者自由勾選加分
+    id: "zhong_dao", name: "中島空間", enabled: false, 
     criteria: [
       { name: "中島檯面長度", opts: [{ l: "<120cm", v: 0.6 }, { l: "120~180cm", v: 1.0 }, { l: ">180cm", v: 1.2 }], d: 1 },
       { name: "中島檯面深度", opts: [{ l: "<60cm", v: "not ok" }, { l: "60~80cm", v: 1.0 }, { l: ">80cm", v: 1.2 }], d: 1 },
@@ -347,7 +347,7 @@ function updateLayoutConfig() {
   setEnable("plus_one", hasPlusOne);
   
 // 中島空間改為獨立常態顯示的加分卡片，由使用者自行決定是否勾選啟用
-  setEnable("zhong_dao", true);
+  setEnable("zhong_dao", false);
 
   calculateAll();
 }
@@ -608,12 +608,20 @@ function togglePlusOne(checked) {
 function applyExtremePreset(mode) {
   spaces.forEach((sp) => {
     sp.criteria.forEach((crit, critIdx) => {
+      // 過濾出所有數值選項
       const validOpts = crit.opts.map((opt, idx) => ({ ...opt, origIdx: idx })).filter(opt => typeof opt.v === 'number');
       if (!validOpts.length) return;
 
-      const targetOpt = mode === 'max'
-        ? validOpts.reduce((prev, curr) => (curr.v > prev.v ? curr : prev))
-        : validOpts.reduce((prev, curr) => (curr.v < prev.v ? curr : prev));
+      let targetOpt;
+      if (mode === 'max') {
+        // 抓最高分選項
+        targetOpt = validOpts.reduce((prev, curr) => (curr.v > prev.v ? curr : prev));
+      } else {
+        // 最低合格標分：抓大於 0 且數值最小的選項（即剛好及格的低標），若無則抓最小值
+        const positiveOpts = validOpts.filter(o => o.v > 0);
+        const pool = positiveOpts.length ? positiveOpts : validOpts;
+        targetOpt = pool.reduce((prev, curr) => (curr.v < prev.v ? curr : prev));
+      }
 
       crit.d = targetOpt.origIdx;
       syncSelectUI(sp.id, critIdx, targetOpt.origIdx);
