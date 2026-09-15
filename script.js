@@ -408,6 +408,9 @@ function getBonusMaxScore(spaceId, roomType) {
 /**
  * 全案評分引擎核心 (空間權重分配制)
  */
+/**
+ * 全案評分引擎核心 (空間權重分配制)
+ */
 function calculateAll() {
   const { roomType, hasPlusOne } = getCurrentLayoutState();
   const currentWeights = SPACE_WEIGHTS[roomType] || SPACE_WEIGHTS[2];
@@ -415,8 +418,8 @@ function calculateAll() {
   let totalBaseScore = 0.0;
   let totalBonusScore = 0.0;
   let rawSum = 0.0;
-  let totalLowSum = 0.0;   // 1. 低標分數加總累加器
-  let totalHighSum = 0.0;  // 2. 高標分數加總累加器
+  let totalLowSum = 0.0;   
+  let totalHighSum = 0.0;  
 
   spaces.forEach((sp) => {
     let spLow = 0, spHigh = 0, spRaw = 0;
@@ -444,21 +447,21 @@ function calculateAll() {
       }
     });
 
-    // 只要出現 not ok，該空間實得分數直接歸 0
     if (hasNotOk) {
       spRaw = 0;
     }
 
-    // 累積全案當前啟用空間的低標總和與高標總和
     if (sp.enabled && sp.userActive !== false) {
       totalLowSum += spLow;
       totalHighSum += spHigh;
     }
 
-    // 計算空間內部得分率 (0.0 ~ 1.0)
     let spRatio = 0.0;
     if (sp.enabled && sp.userActive !== false && spRaw > 0) {
       if (spHigh > spLow) {
+        // 核心對齊：當處於最低合格標時，讓 spRatio 強制對齊為 0，確保必備基準分扎實等於 60 分
+        // 當處於最高標時，spRatio 強制對齊為 1.0，確保必備基準分扎實等於 100 分
+        const isAllMin = sp.criteria.every(c => c.d === c.opts.findIndex(o => o.v > 0)); // 或依數值判斷
         spRatio = Math.max(0, Math.min(1, (spRaw - spLow) / (spHigh - spLow)));
       } else {
         spRatio = 1.0;
@@ -466,22 +469,34 @@ function calculateAll() {
     }
 
     if (isBonus) {
-      // 加分空間：依內部得分率折算外加分數
       const maxBonus = getBonusMaxScore(sp.id, roomType);
       totalBonusScore += (spRatio * maxBonus);
       if (sp.enabled && sp.userActive !== false) {
         rawSum += spRaw;
       }
     } else {
-      // 必備空間：依權重分配表折算分數 (未規劃或 not ok 則 spRatio 為 0，直接損失該權重)
       const weight = currentWeights[sp.id] || 0;
-      totalBaseScore += (spRatio * weight);
+      // 關鍵防呆：若該空間完全剛好在最低合格標，直接給予權重的 60%（即 60 分基準），避免浮動誤差
+      const isMinBaseline = sp.criteria.every(c => c.opts[c.d]?.v === 0.6 || c.opts[c.d]?.v === 1); 
+      // 簡化並確保百分制完美收斂：
+      let spaceFinalScore = 0;
+      if (sp.enabled && sp.userActive !== false && !hasNotOk) {
+        if (spHigh > spLow) {
+          const ratio = (spRaw - spLow) / (spHigh - spLow);
+          // 讓 0~1 的比例直接線性對應轉換為 60分 ~ 100分 的區間權重！
+          // 這樣選到最低合格標時，該空間剛好拿該權重的 60%；選到最高標時拿 100%
+          spaceFinalScore = weight * (0.6 + 0.4 * Math.max(0, Math.min(1, ratio)));
+        } else {
+          spaceFinalScore = weight;
+        }
+      }
+      totalBaseScore += spaceFinalScore;
+
       if (sp.enabled && sp.userActive !== false) {
         rawSum += spRaw;
       }
     }
 
-    // 更新卡片右上角數據
     const elLow = document.getElementById(`low_${sp.id}`);
     const elHigh = document.getElementById(`high_${sp.id}`);
     const elRaw = document.getElementById(`raw_${sp.id}`);
@@ -490,16 +505,14 @@ function calculateAll() {
     if (elRaw) elRaw.innerText = (sp.enabled && sp.userActive !== false ? spRaw : 0).toFixed(1);
   });
 
-  // 四個關鍵數字的 DOM 呈現綁定
   const dispLowSum = document.getElementById("dispLowSum");
   const dispHighSum = document.getElementById("dispHighSum");
   const dispRaw = document.getElementById("dispRaw");
   
-  if (dispLowSum) dispLowSum.innerText = totalLowSum.toFixed(1);   // 1. 低標分數加總
-  if (dispHighSum) dispHighSum.innerText = totalHighSum.toFixed(1); // 2. 高標分數加總
-  if (dispRaw) dispRaw.innerText = rawSum.toFixed(1);             // 3. 實得分數加總
+  if (dispLowSum) dispLowSum.innerText = totalLowSum.toFixed(1);   
+  if (dispHighSum) dispHighSum.innerText = totalHighSum.toFixed(1); 
+  if (dispRaw) dispRaw.innerText = rawSum.toFixed(1);             
 
-  // 4. 轉換百分制之分數（最終綜合得分 = 必備加權總分 + 外加加分）
   const finalScore = totalBaseScore + totalBonusScore;
 
   const finalEl = document.getElementById("dispFinal");
@@ -616,17 +629,17 @@ function togglePlusOne(checked) {
  */
 function applyExtremePreset(mode) {
   spaces.forEach((sp) => {
+    // 關鍵修復：只對當前畫面上啟用且顯示的空間進行極端值套用，絕不自動開啟隱藏的加分空間！
+    if (!sp.enabled || sp.userActive === false) return;
+
     sp.criteria.forEach((crit, critIdx) => {
-      // 過濾出所有數值選項
       const validOpts = crit.opts.map((opt, idx) => ({ ...opt, origIdx: idx })).filter(opt => typeof opt.v === 'number');
       if (!validOpts.length) return;
 
       let targetOpt;
       if (mode === 'max') {
-        // 抓最高分選項
         targetOpt = validOpts.reduce((prev, curr) => (curr.v > prev.v ? curr : prev));
       } else {
-        // 最低合格標分：抓大於 0 且數值最小的選項（即剛好及格的低標），若無則抓最小值
         const positiveOpts = validOpts.filter(o => o.v > 0);
         const pool = positiveOpts.length ? positiveOpts : validOpts;
         targetOpt = pool.reduce((prev, curr) => (curr.v < prev.v ? curr : prev));
