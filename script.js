@@ -146,7 +146,14 @@ function syncSelectUI(spaceId, critIdx, val) {
   const card = document.getElementById(`card_${spaceId}`);
   if (card) {
     const selects = card.querySelectorAll("select.crit-select");
-    if (selects[critIdx]) selects[critIdx].value = val;
+    const sel = selects[critIdx];
+    if (sel) {
+      sel.value = val;
+      // 取得當前選中項目的分數值
+      const sp = spaces.find(s => s.id === spaceId);
+      const optVal = sp?.criteria[critIdx]?.opts[val]?.v;
+      sel.classList.toggle("not-ok", optVal === "not ok");
+    }
   }
 }
 
@@ -241,6 +248,7 @@ function onCritChange(spIdx, critIdx, el) {
   const sp = spaces[spIdx];
   const crit = sp.criteria[critIdx];
   crit.d = parseInt(el.value);
+  el.classList.toggle("not-ok", crit.opts[crit.d]?.v === "not ok");
 
   // 防呆：衛浴若選四件式，自動配置浴缸預設值
   if (crit.name === "套件數" && crit.opts[crit.d]?.l === "四件式") {
