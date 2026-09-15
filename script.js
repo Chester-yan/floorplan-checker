@@ -360,9 +360,12 @@ function calculateAll() {
         bonusHigh += spHigh;
       }
     } else {
-      // 基準必備與常態空間：納入基準滿分母體
-      if (sp.enabled && (isRequired || sp.userActive !== false)) {
+      // 低標合格門檻：僅由法定基準必備空間累計
+      if (sp.enabled && isRequired) {
         baseLow += spLow;
+      }
+      // 高標滿分線：必備空間 OR 使用者實質啟用的常態空間
+      if (sp.enabled && (isRequired || sp.userActive !== false)) {
         baseHigh += spHigh;
       }
       if (sp.enabled && sp.userActive !== false) {
