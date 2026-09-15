@@ -52,7 +52,7 @@ p.subtitle { color: var(--text-muted); font-size: 0.9rem; }
 
 .btn-action { background: #0f172a; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: background 0.2s; }
 .btn-action:hover { background: #334155; }
-.card { background: white; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 16px; padding: 16px; }
+.card { background: white; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 16px; padding: 16px; overflow: hidden; }
 
 /* 列印與另存 PDF 專用樣式 */
 @page {
@@ -112,6 +112,7 @@ p.subtitle { color: var(--text-muted); font-size: 0.9rem; }
     margin-bottom: 10px !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
+    gap: 16px;
   }
 
   /* 第三區塊：家配圖適應 A4 空間高度 */
@@ -146,10 +147,10 @@ p.subtitle { color: var(--text-muted); font-size: 0.9rem; }
     margin-bottom: 10px !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
-    overflow: visible !important; /* 確保不被裁切 */
+    overflow: visible !important;
   }
   #radarChartCard > div:nth-child(2) {
-    height: 260px !important; /* 修正：放寬高度至 260px，不再硬壓造成切邊 */
+    height: 260px !important;
     max-width: 420px !important;
     margin: 0 auto !important;
     position: relative !important;
@@ -165,7 +166,7 @@ p.subtitle { color: var(--text-muted); font-size: 0.9rem; }
     border: 1px solid #cbd5e1 !important;
     padding: 8px 14px !important;
     margin-bottom: 0 !important;
-    page-break-after: always !important; /* 第五區塊結束後強制換到第二頁 */
+    page-break-after: always !important;
     break-after: page !important;
   }
   #iptConclusion {
@@ -193,6 +194,7 @@ p.subtitle { color: var(--text-muted); font-size: 0.9rem; }
     font-weight: 600;
     color: #0f172a;
     padding: 0 !important;
+    width: 100% !important;
   }
 }
 
