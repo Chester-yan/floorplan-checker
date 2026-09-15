@@ -318,14 +318,13 @@ function isBonusSpace(spaceId, roomType, hasPlusOne) {
   if (roomType === 1 && !hasPlusOne && spaceId === "xuan_guan") {
     return true;
   }
+  // 1 房若額外規劃主臥套房衛浴（雙衛浴規格），視為純加分空間
+  if (roomType === 1 && spaceId === "zhu_wo_bath") {
+    return true;
+  }
   // 2 房以上次臥專屬套浴，一律視為純加分空間
   const secondarySuiteBaths = ["ci_wo_1_bath", "ci_wo_2_bath", "ci_wo_3_bath"];
   if (roomType >= 2 && secondarySuiteBaths.includes(spaceId)) {
-    return true;
-  }
-  // 3 特殊加分空間(未完成)
-  const extraLuxurySpaces = [];
-  if (extraLuxurySpaces.includes(spaceId)) {
     return true;
   }
   return false;
@@ -463,7 +462,11 @@ function updateSuiteOptions(roomType, shouldAllocate = true) {
   suiteSel.innerHTML = html;
 
   if (shouldAllocate) {
-    const defaultCount = Math.min(roomType, isNaN(currentVal) ? 1 : currentVal);
+    // 1 房默認 0 套（全雅房），2 房以上默認 1 套
+    let defaultCount = roomType === 1 ? 0 : 1;
+    if (!isNaN(currentVal) && currentVal <= roomType) {
+      defaultCount = currentVal;
+    }
     suiteSel.value = defaultCount;
     applySuiteAllocation(defaultCount, roomType);
   }
