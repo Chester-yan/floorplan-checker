@@ -850,7 +850,7 @@ function confirmImportFromAI() {
   }
 }
 
-// 匯出當前系統狀態為 JSON
+// 匯出當前系統狀態為 TXT 文字檔案
 function exportCurrentJSON() {
   try {
     const { roomType, hasPlusOne } = getCurrentLayoutState();
@@ -870,28 +870,27 @@ function exportCurrentJSON() {
     };
 
     const jsonString = JSON.stringify(exportData, null, 2);
-    const modal = document.getElementById("aiModal");
-    const textarea = document.getElementById("iptAiJson");
 
-    if (modal && textarea) {
-      textarea.value = jsonString;
-      modal.style.display = "flex";
-      textarea.focus();
-      textarea.select();
-    }
+    // 取得建案名稱、戶號與當前日期作為預設下載檔名
+    const projectName = getIptVal("iptProjectName", "未指定建案");
+    const unitNumber = getIptVal("iptUnitNumber", "未指定戶號");
+    const now = new Date();
+    const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+    const fileName = `${dateStr}_${projectName}_${unitNumber}_評估代碼.txt`;
 
-    if (navigator.clipboard && window.isSecureContext) {
-      navigator.clipboard.writeText(jsonString).then(() => {
-        alert("✅ 當前評估 JSON 代碼已自動複製至剪貼簿！");
-      }).catch(() => {
-        alert("已產生評估代碼，請直接在彈跳視窗中按 Ctrl+C 複製。");
-      });
-    } else {
-      alert("已產生評估代碼，請直接在彈跳視窗中按 Ctrl+C 複製。");
-    }
+    // 建立文字 Blob 並觸發瀏覽器原生下載
+    const blob = new Blob([jsonString], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
 
   } catch (err) {
-    alert("匯出發生錯誤：" + err.message);
+    alert("匯出檔案發生錯誤：" + err.message);
   }
 }
 
