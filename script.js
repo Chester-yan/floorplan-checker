@@ -312,10 +312,18 @@ function isBaselineRequiredSpace(spaceId, roomType, hasPlusOne) {
   return coreSpaces.includes(spaceId);
 }
 
+//加分空間
 function isBonusSpace(spaceId, roomType, hasPlusOne) {
+  // 1 房未 +1 時，玄關為純加分
   if (roomType === 1 && !hasPlusOne && spaceId === "xuan_guan") {
     return true;
   }
+  // 2 房以上次臥專屬套浴，一律視為純加分空間
+  const secondarySuiteBaths = ["ci_wo_1_bath", "ci_wo_2_bath", "ci_wo_3_bath"];
+  if (roomType >= 2 && secondarySuiteBaths.includes(spaceId)) {
+    return true;
+  }
+  // 3 特殊加分空間(未完成)
   const extraLuxurySpaces = [];
   if (extraLuxurySpaces.includes(spaceId)) {
     return true;
@@ -365,12 +373,14 @@ function calculateAll() {
         bonusHigh += spHigh;
       }
     } else {
-      if (sp.enabled && isRequired) {
-        baseLow += spLow;
-      }
-      if (sp.enabled && (isRequired || sp.userActive !== false)) {
-        baseHigh += spHigh;
-      }
+    // 凡是必備空間，無論有無被取消勾選/停用，低標與高標分母 100% 完整計入
+    if (isRequired) {
+      baseLow += spLow;
+      baseHigh += spHigh;
+    } else if (sp.enabled && sp.userActive !== false) {
+      // 非必備之常態空間（如高房型次臥、套浴等），有啟用才計入高標
+      baseHigh += spHigh;
+    }
       if (sp.enabled && sp.userActive !== false) {
         baseRaw += spRaw;
       }
