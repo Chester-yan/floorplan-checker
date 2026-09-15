@@ -175,7 +175,7 @@ function checkIsSuite(spaceId) {
   const sp = spaces.find(s => s.id === spaceId);
   if (!sp) return false;
   const crit = sp.criteria.find(c => c.name === "是否為套房");
-  return crit ? crit.opts[crit.d].l === "是" : false;
+  return (crit?.opts[crit.d]?.l === "是") ? true : false;
 }
 
 // ==========================================
@@ -281,8 +281,8 @@ function updateLayoutConfig() {
   const { roomType, hasPlusOne } = getCurrentLayoutState();
 
   // 1. 常態機能空間（2房以上 或 1房含+1房 啟用玄關）
-  setEnable("xuan_guan", roomType >= 2 || (roomType === 1 && hasPlusOne));
-  ["ke_ting", "can_ting", "chu_fang", "yang_tai", "zhu_wo", "ke_yu"].forEach(id => setEnable(id, true));
+  // 修正後：玄關、客廳、餐廳、廚房、陽台、主臥、客浴一律常態啟用卡片  
+  ["xuan_guan", "ke_ting", "can_ting", "chu_fang", "yang_tai", "zhu_wo", "ke_yu"].forEach(id => setEnable(id, true));
 
   // 2. 次臥房動態開展
   setEnable("ci_wo_1", roomType >= 2);
@@ -299,7 +299,7 @@ function updateLayoutConfig() {
   setEnable("plus_one", hasPlusOne);
   const kitchen = spaces.find(s => s.id === "chu_fang");
   const islandOpt = kitchen ? kitchen.criteria.find(c => c.name === "設置中島") : null;
-  setEnable("zhong_dao", islandOpt ? islandOpt.opts[islandOpt.d].l === "有設置" : false);
+  setEnable("zhong_dao", islandOpt ? islandOpt.opts[islandOpt.d]?.l === "有設置" : false);
 
   calculateAll();
 }
@@ -308,45 +308,42 @@ function updateLayoutConfig() {
 // 評分計算與基準判定
 // ==========================================
 
-// 判定特定空間在當前房型下是否為「法定/基準必備空間」
+// 判定特定空間在當前房型下是否為「基準必備空間」
 function isBaselineRequiredSpace(spaceId, roomType, hasPlusOne) {
+  // 玄關：2 房以上 或 1 房含 +1 房才算「必備基準空間」；純 1 房為加值空間
   if (spaceId === "xuan_guan") return roomType >= 2 || (roomType === 1 && hasPlusOne);
+
+  // 次臥房依房型階梯式判定
   if (spaceId === "ci_wo_1") return roomType >= 2;
   if (spaceId === "ci_wo_2") return roomType >= 3;
   if (spaceId === "ci_wo_3") return roomType >= 4;
 
+  // 客廳、餐廳、廚房、工作陽台、主臥、客浴：全房型一律為「必備基準空間」
   const coreSpaces = ["ke_ting", "can_ting", "chu_fang", "yang_tai", "zhu_wo", "ke_yu"];
-  if (coreSpaces.includes(spaceId)) {
-    // 獨立1房無+1房時，餐廳允許省略不計入門檻
-    return !(spaceId === "can_ting" && roomType === 1 && !hasPlusOne);
-  }
-  return false;
+  return coreSpaces.includes(spaceId);
 }
 
 // 全空間計分計算引擎
 function calculateAll() {
   const { roomType, hasPlusOne } = getCurrentLayoutState();
-  let totalLow = 0, totalHigh = 0, totalRaw = 0;
+  let baseLow = 0, baseHigh = 0, baseRaw = 0;
+  let bonusRaw = 0, bonusHigh = 0;
 
   spaces.forEach((sp) => {
     let spLow = 0, spHigh = 0, spRaw = 0;
     const isRequired = isBaselineRequiredSpace(sp.id, roomType, hasPlusOne);
+    const isBonus = isBonusSpace(sp.id, roomType, hasPlusOne);
 
-    // 門檻母體：必備基準空間（即使未留設仍計算母體門檻）或非必備但實質啟用的空間
-    const countIntoThreshold = sp.enabled && (isRequired || sp.userActive !== false);
-    // 實得分數：案子必須實質留設（userActive 為 true）才計分
-    const countIntoRaw = sp.enabled && (sp.userActive !== false);
-
+    // 計算各空間本身的指標極值與實得
     sp.criteria.forEach((crit) => {
       const validScores = crit.opts.filter(o => typeof o.v === 'number').map(o => o.v);
       const minVal = validScores.length ? Math.min(...validScores) : 0;
       const maxVal = validScores.length ? Math.max(...validScores) : 0;
 
-      if (countIntoThreshold) {
-        spLow += minVal;
-        spHigh += maxVal;
-      }
-      if (countIntoRaw) {
+      spLow += minVal;
+      spHigh += maxVal;
+
+      if (sp.enabled && sp.userActive !== false) {
         const selOpt = crit.opts[crit.d];
         if (selOpt && selOpt.v !== "not ok") {
           spRaw += Number(selOpt.v);
@@ -354,39 +351,81 @@ function calculateAll() {
       }
     });
 
+    // 依空間屬性分類累計
+    if (isBonus) {
+      // 加值空間（如 1 房玄關、未來洗衣房/劇院等）：
+      // 不計入基準門檻母體，僅在實質啟用時累計加值得分與滿分上限
+      if (sp.enabled && sp.userActive !== false) {
+        bonusRaw += spRaw;
+        bonusHigh += spHigh;
+      }
+    } else {
+      // 基準必備與常態空間：納入基準滿分母體
+      if (sp.enabled && (isRequired || sp.userActive !== false)) {
+        baseLow += spLow;
+        baseHigh += spHigh;
+      }
+      if (sp.enabled && sp.userActive !== false) {
+        baseRaw += spRaw;
+      }
+    }
+
+    // 更新各卡片右上角分數
     const elLow = document.getElementById(`low_${sp.id}`);
     const elHigh = document.getElementById(`high_${sp.id}`);
     const elRaw = document.getElementById(`raw_${sp.id}`);
-    if (elLow) elLow.innerText = spLow.toFixed(1);
+    if (elLow) elLow.innerText = (isBonus ? 0 : spLow).toFixed(1);
     if (elHigh) elHigh.innerText = spHigh.toFixed(1);
-    if (elRaw) elRaw.innerText = spRaw.toFixed(1);
-
-    totalLow += spLow;
-    totalHigh += spHigh;
-    totalRaw += spRaw;
+    if (elRaw) elRaw.innerText = (sp.enabled && sp.userActive !== false ? spRaw : 0).toFixed(1);
   });
 
+  // 底部統計數據顯示
   const dispLow = document.getElementById("dispLow");
   const dispHigh = document.getElementById("dispHigh");
   const dispRaw = document.getElementById("dispRaw");
-  if (dispLow) dispLow.innerText = totalLow.toFixed(1);
-  if (dispHigh) dispHigh.innerText = totalHigh.toFixed(1);
-  if (dispRaw) dispRaw.innerText = totalRaw.toFixed(1);
+  if (dispLow) dispLow.innerText = baseLow.toFixed(1);
+  if (dispHigh) dispHigh.innerText = (baseHigh + bonusHigh).toFixed(1);
+  if (dispRaw) dispRaw.innerText = (baseRaw + bonusRaw).toFixed(1);
 
-  // 換算 60~100 分標準分
-  let finalScore = 60.0;
-  if (totalHigh > totalLow) {
-    finalScore = 60.0 + ((totalRaw - totalLow) / (totalHigh - totalLow)) * 40.0;
+  // 1. 計算基本空間的 60~100 分標準分
+  let baseScore = 60.0;
+  if (baseHigh > baseLow) {
+    baseScore = 60.0 + ((baseRaw - baseLow) / (baseHigh - baseLow)) * 40.0;
   }
-  finalScore = Math.max(0, Math.min(100, finalScore));
+
+  // 2. 計算加值空間的外掛加分點數（依基準 40 分量尺比例加權換算）
+  let bonusScore = 0.0;
+  if (baseHigh > baseLow && bonusRaw > 0) {
+    bonusScore = (bonusRaw / (baseHigh - baseLow)) * 40.0;
+  }
+
+  // 3. 總分疊加，並解除 100 分上限封頂限制
+  let finalScore = Math.max(0, baseScore + bonusScore);
 
   const finalEl = document.getElementById("dispFinal");
   if (finalEl) {
     finalEl.innerText = finalScore.toFixed(1);
-    finalEl.style.color = finalScore >= 80 ? "var(--success)" : finalScore >= 60 ? "var(--primary)" : "var(--danger)";
+    // 超過 100 分時使用亮眼金色/紫金色突顯卓越規劃
+    finalEl.style.color = finalScore > 100 ? "#b45309" : finalScore >= 80 ? "var(--success)" : finalScore >= 60 ? "var(--primary)" : "var(--danger)";
   }
 
   updateRadarChart();
+}
+
+// 輔助函式：定義哪些空間屬於「純加值外掛加分空間」
+function isBonusSpace(spaceId, roomType, hasPlusOne) {
+  // 純 1 房（無 +1 房）時，玄關作為唯一彈性外掛加值空間
+  if (roomType === 1 && !hasPlusOne && spaceId === "xuan_guan") {
+    return true;
+  }
+
+  // 特殊奢華/機能加值空間保留區（待第四章空間規範完備後再行增設）
+  const extraLuxurySpaces = [];
+  if (extraLuxurySpaces.includes(spaceId)) {
+    return true;
+  }
+
+  return false;
 }
 
 // ==========================================
@@ -394,15 +433,16 @@ function calculateAll() {
 // ==========================================
 
 // 房型預設切換 (1/2/3/4 房)
-function setPreset(roomNum) {
+function setPreset(roomNum, shouldAllocate = true) {
   const selEl = document.getElementById("selBedrooms");
   if (selEl) selEl.value = roomNum;
 
   document.querySelectorAll(".type-btn").forEach(btn => {
-    btn.classList.toggle("active", btn.getAttribute("onclick") === `setPreset('${roomNum}')`);
+    btn.classList.toggle("active", btn.getAttribute("onclick")?.includes(`setPreset('${roomNum}')`) || btn.getAttribute("onclick")?.includes(`setPreset(${roomNum})`));
   });
 
-  updateSuiteOptions(parseInt(roomNum));
+  // 傳入 shouldAllocate 旗標
+  updateSuiteOptions(parseInt(roomNum), shouldAllocate);
   updateLayoutConfig();
 }
 
@@ -416,7 +456,7 @@ function getActiveBedroomIds(roomType) {
 }
 
 // 依房型動態重組「套房數量」選單
-function updateSuiteOptions(roomType) {
+function updateSuiteOptions(roomType, shouldAllocate = true) {
   const suiteSel = document.getElementById("selSuiteCount");
   if (!suiteSel) return;
 
@@ -427,9 +467,12 @@ function updateSuiteOptions(roomType) {
   }
   suiteSel.innerHTML = html;
 
-  const defaultCount = Math.min(roomType, isNaN(currentVal) ? 1 : currentVal);
-  suiteSel.value = defaultCount;
-  applySuiteAllocation(defaultCount, roomType);
+  // 只有在 shouldAllocate 為 true 時，才自動覆寫房間的套房狀態
+  if (shouldAllocate) {
+    const defaultCount = Math.min(roomType, isNaN(currentVal) ? 1 : currentVal);
+    suiteSel.value = defaultCount;
+    applySuiteAllocation(defaultCount, roomType);
+  }
   updateSpecTitle();
 }
 
@@ -796,21 +839,14 @@ function confirmImportFromAI() {
     const cleanText = textarea.value.trim().replace(/[\u00A0\u1680\u180E\u2000-\u200B\u202F\u205F\u3000\uFEFF]/g, ' ');
     const data = JSON.parse(cleanText);
 
+    // 1. 基本文字與房型設定
     if (data.projectName !== undefined) document.getElementById("iptProjectName").value = data.projectName;
     if (data.unitNumber !== undefined) document.getElementById("iptUnitNumber").value = data.unitNumber;
-    if (data.roomType !== undefined) setPreset(String(data.roomType));
+    if (data.roomType !== undefined) setPreset(String(data.roomType), false);
 
     if (data.hasPlusOne !== undefined) {
       const chk = document.getElementById("chkPlusOne");
       if (chk) chk.checked = !!data.hasPlusOne;
-    }
-
-    if (data.suiteCount !== undefined) {
-      const selSuite = document.getElementById("selSuiteCount");
-      if (selSuite) {
-        selSuite.value = data.suiteCount;
-        onSuiteCountChange(parseInt(data.suiteCount));
-      }
     }
 
     if (data.conclusion !== undefined) {
@@ -818,6 +854,19 @@ function confirmImportFromAI() {
       if (el) el.value = data.conclusion;
     }
 
+    // 2. 先重設所有空間為啟用狀態，確保乾淨環境
+    spaces.forEach(sp => {
+      sp.userActive = true;
+      const chk = document.getElementById(`toggle_${sp.id}`);
+      if (chk) chk.checked = true;
+      const card = document.getElementById(`card_${sp.id}`);
+      if (card) {
+        card.classList.remove("is-disabled");
+        card.querySelectorAll("select.crit-select").forEach(sel => sel.disabled = false);
+      }
+    });
+
+    // 3. 停用建商未規劃之空間
     if (Array.isArray(data.disabledSpaces)) {
       data.disabledSpaces.forEach(spaceId => {
         const chk = document.getElementById(`toggle_${spaceId}`);
@@ -826,6 +875,7 @@ function confirmImportFromAI() {
       });
     }
 
+    // 4. 將 JSON 中完整的各空間指標選項（selections）安全填入
     if (data.selections) {
       Object.keys(data.selections).forEach(spaceId => {
         const sp = spaces.find(s => s.id === spaceId);
@@ -840,6 +890,13 @@ function confirmImportFromAI() {
       });
     }
 
+    // 5. 【關鍵修改】在所有指標都就定位後，僅單純更新套房下拉選單數值，不再呼叫 onSuiteCountChange 進行覆寫
+    if (data.suiteCount !== undefined) {
+      const selSuite = document.getElementById("selSuiteCount");
+      if (selSuite) selSuite.value = data.suiteCount;
+    }
+
+    // 6. 全資料就緒後，一次性統一更新全域排版、標題與計分
     updateLayoutConfig();
     updateSpecTitle();
     closeAiModal();
