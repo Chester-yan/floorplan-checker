@@ -601,14 +601,21 @@ function updateRadarChart() {
     const raw = parseFloat(document.getElementById(`raw_${sp.id}`)?.innerText || 0);
 
     if (raw === 0) return 0;
-    if (high <= low) return 100;
+    const isBonus = isBonusSpace(sp.id, roomType, hasPlusOne);
 
-    const score = 60.0 + ((raw - low) / (high - low)) * 40.0;
-    // 移除 Math.min(100)，允許單項機能突出時突破 100 分
-    return Math.max(0, Math.round(score));
+    if (isBonus) {
+      // 加分空間：具備此機能即突破 100 分，依得分表現向外延展至 140 分
+      const bonusRate = high > 0 ? (raw / high) : 1;
+      return Math.round(100 + bonusRate * 40);
+    } else {
+      // 標準基準空間：滿分鎖定在 100 分綠線
+      if (high <= low) return 100;
+      const score = 60.0 + ((raw - low) / (high - low)) * 40.0;
+      return Math.max(0, Math.min(100, Math.round(score)));
+    }
   });
 
-  // 動態計算坐標軸最高刻度，若有項目破百則向上延展
+  // 動態擴展雷達圖上限：有加分空間突破時，軸度擴展至 120 或 140
   const maxVal = Math.max(...dataValues, 100);
   const dynamicMax = Math.ceil(maxVal / 20) * 20;
 
@@ -630,7 +637,7 @@ function updateRadarChart() {
       label: "高標滿分線 (100分)",
       data: highThresholdData,
       backgroundColor: "transparent",
-      borderColor: "rgba(22, 163, 74, 0.6)", // 翠綠色高標線
+      borderColor: "rgba(22, 163, 74, 0.6)",
       borderWidth: 1.5,
       borderDash: [4, 4],
       pointRadius: 0,
@@ -640,7 +647,7 @@ function updateRadarChart() {
       label: "低標合格線 (60分)",
       data: lowThresholdData,
       backgroundColor: "transparent",
-      borderColor: "rgba(220, 38, 38, 0.5)", // 紅色低標線
+      borderColor: "rgba(220, 38, 38, 0.5)",
       borderWidth: 1.5,
       borderDash: [3, 3],
       pointRadius: 0,
