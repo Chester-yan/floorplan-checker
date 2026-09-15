@@ -408,9 +408,6 @@ function getBonusMaxScore(spaceId, roomType) {
 /**
  * 全案評分引擎核心 (空間權重分配制)
  */
-/**
- * 全案評分引擎核心 (空間權重分配制)
- */
 function calculateAll() {
   const { roomType, hasPlusOne } = getCurrentLayoutState();
   const currentWeights = SPACE_WEIGHTS[roomType] || SPACE_WEIGHTS[2];
@@ -456,19 +453,14 @@ function calculateAll() {
       totalHighSum += spHigh;
     }
 
-    let spRatio = 0.0;
-    if (sp.enabled && sp.userActive !== false && spRaw > 0) {
-      if (spHigh > spLow) {
-        // 核心對齊：當處於最低合格標時，讓 spRatio 強制對齊為 0，確保必備基準分扎實等於 60 分
-        // 當處於最高標時，spRatio 強制對齊為 1.0，確保必備基準分扎實等於 100 分
-        const isAllMin = sp.criteria.every(c => c.d === c.opts.findIndex(o => o.v > 0)); // 或依數值判斷
+    // 計算空間得分與權重折算
+    if (isBonus) {
+      let spRatio = 0.0;
+      if (sp.enabled && sp.userActive !== false && spRaw > 0 && spHigh > spLow) {
         spRatio = Math.max(0, Math.min(1, (spRaw - spLow) / (spHigh - spLow)));
-      } else {
+      } else if (sp.enabled && sp.userActive !== false && spHigh === spLow) {
         spRatio = 1.0;
       }
-    }
-
-    if (isBonus) {
       const maxBonus = getBonusMaxScore(sp.id, roomType);
       totalBonusScore += (spRatio * maxBonus);
       if (sp.enabled && sp.userActive !== false) {
@@ -476,16 +468,14 @@ function calculateAll() {
       }
     } else {
       const weight = currentWeights[sp.id] || 0;
-      // 關鍵防呆：若該空間完全剛好在最低合格標，直接給予權重的 60%（即 60 分基準），避免浮動誤差
-      const isMinBaseline = sp.criteria.every(c => c.opts[c.d]?.v === 0.6 || c.opts[c.d]?.v === 1); 
-      // 簡化並確保百分制完美收斂：
       let spaceFinalScore = 0;
+      
       if (sp.enabled && sp.userActive !== false && !hasNotOk) {
         if (spHigh > spLow) {
-          const ratio = (spRaw - spLow) / (spHigh - spLow);
-          // 讓 0~1 的比例直接線性對應轉換為 60分 ~ 100分 的區間權重！
-          // 這樣選到最低合格標時，該空間剛好拿該權重的 60%；選到最高標時拿 100%
-          spaceFinalScore = weight * (0.6 + 0.4 * Math.max(0, Math.min(1, ratio)));
+          const ratio = Math.max(0, Math.min(1, (spRaw - spLow) / (spHigh - spLow)));
+          // 核心收斂：將 0~1 的內部比例線性對應映射到 60% ~ 100% 的空間權重區間
+          // 這樣選到最低合格標時剛好拿該權重的 60%（總分收斂 60 分）；選到最高標時拿 100%（總分收斂 100 分）
+          spaceFinalScore = weight * (0.6 + 0.4 * ratio);
         } else {
           spaceFinalScore = weight;
         }
@@ -497,6 +487,7 @@ function calculateAll() {
       }
     }
 
+    // 更新卡片右上角數據
     const elLow = document.getElementById(`low_${sp.id}`);
     const elHigh = document.getElementById(`high_${sp.id}`);
     const elRaw = document.getElementById(`raw_${sp.id}`);
@@ -505,14 +496,16 @@ function calculateAll() {
     if (elRaw) elRaw.innerText = (sp.enabled && sp.userActive !== false ? spRaw : 0).toFixed(1);
   });
 
+  // 四個關鍵數字的 DOM 呈現綁定
   const dispLowSum = document.getElementById("dispLowSum");
   const dispHighSum = document.getElementById("dispHighSum");
   const dispRaw = document.getElementById("dispRaw");
   
-  if (dispLowSum) dispLowSum.innerText = totalLowSum.toFixed(1);   
-  if (dispHighSum) dispHighSum.innerText = totalHighSum.toFixed(1); 
-  if (dispRaw) dispRaw.innerText = rawSum.toFixed(1);             
+  if (dispLowSum) dispLowSum.innerText = totalLowSum.toFixed(1);   // 1. 低標分數加總
+  if (dispHighSum) dispHighSum.innerText = totalHighSum.toFixed(1); // 2. 高標分數加總
+  if (dispRaw) dispRaw.innerText = rawSum.toFixed(1);             // 3. 實得分數加總
 
+  // 4. 轉換百分制之分數（最終綜合得分）
   const finalScore = totalBaseScore + totalBonusScore;
 
   const finalEl = document.getElementById("dispFinal");
