@@ -12,7 +12,7 @@ const SPACE_WEIGHTS = {
   4: { xuan_guan: 6, ke_ting: 12, can_ting: 10, chu_fang: 10, yang_tai: 7, zhu_wo: 12, zhu_wo_bath: 10, ke_yu: 10, ci_wo_1: 8, ci_wo_2: 8, ci_wo_3: 7 }  // 6+12+10+10+7+12+10+10+8+8+7 = 100
 };
 
-// 通用浴室選項範本 (8項指標 - 全衛浴無乾濕分離改為 0 分)
+// 通用浴室選項範本 (8項指標)
 const bathCriteriaTemplate = [
   { name: "開窗", opts: [{ l: "無開窗", v: 0 }, { l: "有開窗", v: 1.0 }], d: 0 },
   { name: "套件數", opts: [{ l: "兩件式", v: 0.6 }, { l: "三件式", v: 1.0 }, { l: "四件式", v: 1.2 }], d: 1 },
@@ -25,13 +25,12 @@ const bathCriteriaTemplate = [
 ];
 
 /**
- * 次臥房選項範本生成器
+ * 次臥房選項範本生成器 (已移除「是否為套房」以防選單衝突)
  */
 function createSecondaryBedroomCriteria() {
   return [
     { name: "空間採光", opts: [{ l: "無", v: 0 }, { l: "間接採光", v: 0.6 }, { l: "直接採光", v: 1.0 }], d: 2 },
     { name: "連接陽台", opts: [{ l: "無連接", v: 0 }, { l: "有連接", v: 1.0 }], d: 0 },
-    { name: "是否為套房", opts: [{ l: "否", v: 0 }, { l: "是", v: 1.0 }], d: 0, isSuiteTrigger: true },
     { name: "床邊走道數", opts: [{ l: "<一邊", v: "not ok" }, { l: "一邊", v: 0.6 }, { l: "兩邊", v: 0.8 }, { l: "三邊", v: 1.0 }], d: 2 },
     { name: "床邊走道淨寬", opts: [{ l: "<50cm", v: 0 }, { l: "≥50cm", v: 0.6 }, { l: ">60cm", v: 1.0 }, { l: ">70cm", v: 1.2 }, { l: ">80cm", v: 1.4 }, { l: ">90cm", v: 1.6 }], d: 2 },
     { name: "衣櫃長度", opts: [{ l: "<120cm", v: 0 }, { l: "≥120cm", v: 0.6 }, { l: ">140cm", v: 0.8 }, { l: ">160cm", v: 1.0 }, { l: ">180cm", v: 1.2 }, { l: ">200cm", v: 1.4 }], d: 1 },
@@ -97,9 +96,20 @@ let spaces = [
       { name: "設置室外機", opts: [{ l: "無設置", v: 0 }, { l: "有設置", v: 1.0 }], d: 1 },
       { name: "設置洗衣機", opts: [{ l: "無設置", v: "not ok" }, { l: "有設置", v: 1.0 }], d: 1 },
       { name: "設置洗衣槽", opts: [{ l: "無設置", v: 0.0 }, { l: "有設置", v: 1.0 }], d: 1 },
-      { name: "設置升降曬衣架", opts: [{ l: "無設置", v: 0 }, { l: "有設置", v: 1.0 }], d: 1 },
+      { name: "設置曬衣架", opts: [{ l: "無設置", v: 0 }, { l: "有設置", v: 1.0 }], d: 1 }, // 修正為「設置曬衣架」
       { name: "開門窗是否影響曬衣架", opts: [{ l: "有影響", v: 0 }, { l: "無影響", v: 1.0 }], d: 1 },
-      { name: "坪數大小", opts: [{ l: "<1坪", v: 0.0 }, { l: ">1坪", v: 0.6 }, { l: ">1.2坪", v: 1.0 }], d: 1 }
+      { 
+        name: "坪數大小", 
+        opts: [
+          { l: "<0.7坪", v: "not ok" },
+          { l: ">0.7坪", v: 0.4 },
+          { l: ">0.8坪", v: 0.6 },
+          { l: ">1坪", v: 0.8 },
+          { l: ">1.2坪", v: 1.0 },
+          { l: ">1.4坪", v: 1.2 }
+        ], 
+        d: 4 
+      }
     ]
   },
   {
@@ -107,7 +117,6 @@ let spaces = [
     criteria: [
       { name: "空間採光", opts: [{ l: "無採光", v: "not ok" }, { l: "間接採光", v: 0.6 }, { l: "直接採光", v: 1.0 }], d: 2 },
       { name: "連接陽台", opts: [{ l: "無連接", v: 0 }, { l: "有連接", v: 1.0 }], d: 0 },
-      { name: "是否為套房", opts: [{ l: "否", v: 0 }, { l: "是", v: 1.0 }], d: 0, isSuiteTrigger: true },
       { name: "床邊留設走道數", opts: [{ l: "<三邊", v: "not ok" }, { l: "三邊", v: 1.0 }], d: 1 },
       { name: "床邊走道淨寬", opts: [{ l: "<50cm", v: 0 }, { l: ">50cm", v: 0.6 }, { l: ">60cm", v: 1.0 }, { l: ">70cm", v: 1.2 }, { l: ">80cm", v: 1.4 }, { l: ">90cm", v: 1.6 }], d: 2 },
       { name: "衣櫃長度", opts: [{ l: "<150cm", v: 0 }, { l: ">150cm", v: 0.6 }, { l: ">180cm", v: 0.8 }, { l: ">200cm", v: 1.0 }, { l: ">250cm", v: 1.2 }, { l: ">300cm", v: 1.6 }], d: 3 },
@@ -165,9 +174,11 @@ function syncSelectUI(spaceId, critIdx, val) {
 function getCurrentLayoutState() {
   const selEl = document.getElementById("selBedrooms");
   const chkPlusOne = document.getElementById("chkPlusOne");
+  const suiteSel = document.getElementById("selSuiteCount");
   return {
     roomType: selEl ? parseInt(selEl.value) : 2,
-    hasPlusOne: chkPlusOne ? chkPlusOne.checked : false
+    hasPlusOne: chkPlusOne ? chkPlusOne.checked : false,
+    suiteCount: suiteSel ? parseInt(suiteSel.value) : 0
   };
 }
 
@@ -178,13 +189,6 @@ function setEnable(id, isEnable) {
     const card = document.getElementById(`card_${id}`);
     if (card) card.classList.toggle("hidden", !isEnable);
   }
-}
-
-function checkIsSuite(spaceId) {
-  const sp = spaces.find(s => s.id === spaceId);
-  if (!sp) return false;
-  const crit = sp.criteria.find(c => c.name === "是否為套房");
-  return (crit?.opts[crit.d]?.l === "是") ? true : false;
 }
 
 // ==========================================
@@ -262,11 +266,7 @@ function onCritChange(spIdx, critIdx, el) {
     }
   }
 
-  if (crit.name === "是否為套房") {
-    updateLayoutConfig();
-  } else {
-    calculateAll();
-  }
+  calculateAll();
 }
 
 function toggleSpaceActive(spaceId, isActive) {
@@ -282,29 +282,59 @@ function toggleSpaceActive(spaceId, isActive) {
   calculateAll();
 }
 
+/**
+ * 表頭勾選特殊加分空間（中島、1房玄關）
+ */
+function toggleBonusSpace(spaceId, isChecked) {
+  const sp = spaces.find(s => s.id === spaceId);
+  if (sp) {
+    sp.enabled = isChecked;
+    sp.userActive = isChecked;
+    const card = document.getElementById(`card_${spaceId}`);
+    if (card) card.classList.toggle("hidden", !isChecked);
+  }
+  calculateAll();
+}
+
+/**
+ * 依表頭格局與套房數，精確依序分配：主臥 -> 次臥1 -> 次臥2 -> 次臥3
+ */
 function updateLayoutConfig() {
-  const { roomType, hasPlusOne } = getCurrentLayoutState();
+  const { roomType, hasPlusOne, suiteCount } = getCurrentLayoutState();
 
   ["ke_ting", "can_ting", "chu_fang", "yang_tai", "zhu_wo", "ke_yu"].forEach(id => setEnable(id, true));
-  setEnable("xuan_guan", true);
 
-  setEnable("zhu_wo_bath", roomType >= 3 ? true : checkIsSuite("zhu_wo"));
+  // 玄關：2房以上或1+1房為必備；1房未+1時由表頭加分勾選控制
+  const isXuanGuanRequired = roomType >= 2 || (roomType === 1 && hasPlusOne);
+  const chkBonusXG = document.getElementById("chkBonusXuanGuan");
+  const lblBonusXG = document.getElementById("lblBonusXuanGuan");
+  if (lblBonusXG) lblBonusXG.style.display = (roomType === 1 && !hasPlusOne) ? "inline-flex" : "none";
+  setEnable("xuan_guan", isXuanGuanRequired || (chkBonusXG ? chkBonusXG.checked : false));
+
+  // 次臥房開合
   setEnable("ci_wo_1", roomType >= 2);
   setEnable("ci_wo_2", roomType >= 3);
   setEnable("ci_wo_3", roomType >= 4);
 
-  setEnable("ci_wo_1_bath", roomType >= 2 && checkIsSuite("ci_wo_1"));
-  setEnable("ci_wo_2_bath", roomType >= 3 && checkIsSuite("ci_wo_2"));
-  setEnable("ci_wo_3_bath", roomType >= 4 && checkIsSuite("ci_wo_3"));
+  // 套房衛浴依套房數量嚴格循序啟用：主臥 -> 次臥1 -> 次臥2 -> 次臥3
+  // 3房以上主臥套房為必備基準；其餘依套房數量遞增
+  const hasZhuWoBath = (roomType >= 3) || (suiteCount >= 1);
+  setEnable("zhu_wo_bath", hasZhuWoBath);
+  setEnable("ci_wo_1_bath", roomType >= 2 && suiteCount >= (roomType >= 3 ? 2 : 2));
+  setEnable("ci_wo_2_bath", roomType >= 3 && suiteCount >= 3);
+  setEnable("ci_wo_3_bath", roomType >= 4 && suiteCount >= 4);
 
   setEnable("plus_one", hasPlusOne);
-  setEnable("zhong_dao", false); // 預設關閉中島
+
+  // 獨立中島空間：全由表頭勾選控制
+  const chkBonusZD = document.getElementById("chkBonusZhongDao");
+  setEnable("zhong_dao", chkBonusZD ? chkBonusZD.checked : false);
 
   calculateAll();
 }
 
 // ==========================================
-// 評分計算與基準判定
+// 評分計算與基準判定 (正規權重百分制)
 // ==========================================
 
 function isBaselineRequiredSpace(spaceId, roomType, hasPlusOne) {
@@ -322,17 +352,16 @@ function isBonusSpace(spaceId, roomType, hasPlusOne) {
   if (roomType === 1 && !hasPlusOne && spaceId === "xuan_guan") return true;
   if (roomType === 2 && spaceId === "zhu_wo_bath") return true;
   const secondarySuiteBaths = ["ci_wo_1_bath", "ci_wo_2_bath", "ci_wo_3_bath"];
-  if (roomType >= 2 && secondarySuiteBaths.includes(spaceId)) return true;
+  if (secondarySuiteBaths.includes(spaceId)) return true;
   if (spaceId === "zhong_dao") return true;
   return false;
 }
 
-// 補回先前被刪除的關鍵函式！
-function getBonusMaxScore(spaceId, roomType) {
-  if (spaceId === "xuan_guan" && roomType === 1) return 8.0;
-  if (spaceId === "zhu_wo_bath" && roomType === 2) return 8.0;
-  if (["ci_wo_1_bath", "ci_wo_2_bath", "ci_wo_3_bath"].includes(spaceId)) return 6.0;
-  if (spaceId === "zhong_dao") return 6.0;
+function getBonusMaxScore(spaceId) {
+  if (spaceId === "xuan_guan") return 6.0;    // 1房加選玄關：比照4房玄關分配6分
+  if (spaceId === "zhu_wo_bath") return 10.0; // 2房加選主臥套房：比照4房浴室10分
+  if (["ci_wo_1_bath", "ci_wo_2_bath", "ci_wo_3_bath"].includes(spaceId)) return 10.0;
+  if (spaceId === "zhong_dao") return 6.0;    // 獨立中島空間：最高+6分
   return 0.0;
 }
 
@@ -392,20 +421,19 @@ function calculateAll() {
     }
 
     if (isBonus) {
-      const maxBonus = getBonusMaxScore(sp.id, roomType);
+      const maxBonus = getBonusMaxScore(sp.id);
       totalBonusScore += (ratio * maxBonus);
     } else {
       const weight = currentWeights[sp.id] || 0;
       let spaceFinalScore = 0;
 
       if (sp.enabled && sp.userActive !== false && !hasNotOk) {
-        // 低標拿 60% 權重，高標拿滿 100%
+        // 全選最低標得權重之 60%，全選最高標得 100%
         spaceFinalScore = weight * (0.6 + 0.4 * ratio);
       }
       totalBaseScore += spaceFinalScore;
     }
 
-    // 更新卡片數據
     const elLow = document.getElementById(`low_${sp.id}`);
     const elHigh = document.getElementById(`high_${sp.id}`);
     const elRaw = document.getElementById(`raw_${sp.id}`);
@@ -414,7 +442,6 @@ function calculateAll() {
     if (elRaw) elRaw.innerText = (sp.enabled && sp.userActive !== false ? spRaw : 0).toFixed(1);
   });
 
-  // 更新下方 4 個統計數字
   const dispLowSum = document.getElementById("dispLowSum");
   const dispHighSum = document.getElementById("dispHighSum");
   const dispRaw = document.getElementById("dispRaw");
@@ -450,14 +477,6 @@ function setPreset(roomNum, shouldAllocate = true) {
   updateLayoutConfig();
 }
 
-function getActiveBedroomIds(roomType) {
-  const rooms = ["zhu_wo"];
-  if (roomType >= 2) rooms.push("ci_wo_1");
-  if (roomType >= 3) rooms.push("ci_wo_2");
-  if (roomType >= 4) rooms.push("ci_wo_3");
-  return rooms;
-}
-
 function updateSuiteOptions(roomType, shouldAllocate = true) {
   const suiteSel = document.getElementById("selSuiteCount");
   if (!suiteSel) return;
@@ -469,31 +488,15 @@ function updateSuiteOptions(roomType, shouldAllocate = true) {
   suiteSel.innerHTML = html;
 
   if (shouldAllocate) {
+    // 1房與2房預設0套；3房以上預設1套(主臥套房)
     const defaultCount = (roomType <= 2) ? 0 : 1;
     suiteSel.value = defaultCount;
-    applySuiteAllocation(defaultCount, roomType);
   }
 
   updateSpecTitle();
 }
 
-function applySuiteAllocation(count, roomType) {
-  getActiveBedroomIds(roomType).forEach((roomId, idx) => {
-    const isSuite = idx < count ? 1 : 0;
-    const sp = spaces.find(s => s.id === roomId);
-    if (sp) {
-      const suiteCritIdx = sp.criteria.findIndex(c => c.name === "是否為套房");
-      if (suiteCritIdx !== -1) {
-        sp.criteria[suiteCritIdx].d = isSuite;
-        syncSelectUI(roomId, suiteCritIdx, isSuite);
-      }
-    }
-  });
-}
-
 function onSuiteCountChange(count) {
-  const { roomType } = getCurrentLayoutState();
-  applySuiteAllocation(parseInt(count), roomType);
   updateLayoutConfig();
   updateSpecTitle();
 }
@@ -503,11 +506,12 @@ function togglePlusOne(checked) {
   updateSpecTitle();
 }
 
+/**
+ * 一鍵套用最高標分 / 最低標分：
+ * 保持目前設定的套房數量與特殊空間開關，只針對畫面上可見之空間進行選項切換
+ */
 function applyExtremePreset(mode) {
-  const { roomType, hasPlusOne } = getCurrentLayoutState();
-
   spaces.forEach((sp) => {
-    // 只針對當前已啟用且畫面上看得見的空間
     if (!sp.enabled || sp.userActive === false) return;
 
     sp.criteria.forEach((crit, critIdx) => {
@@ -518,7 +522,6 @@ function applyExtremePreset(mode) {
       if (mode === 'max') {
         targetOpt = validOpts.reduce((prev, curr) => (curr.v > prev.v ? curr : prev));
       } else {
-        // 低標精準選在最小值
         targetOpt = validOpts.reduce((prev, curr) => (curr.v < prev.v ? curr : prev));
       }
 
@@ -554,6 +557,12 @@ function resetToDefault() {
   const chkPlusOne = document.getElementById("chkPlusOne");
   if (chkPlusOne) chkPlusOne.checked = false;
 
+  const chkBonusZD = document.getElementById("chkBonusZhongDao");
+  if (chkBonusZD) chkBonusZD.checked = false;
+
+  const chkBonusXG = document.getElementById("chkBonusXuanGuan");
+  if (chkBonusXG) chkBonusXG.checked = false;
+
   removeFloorPlan();
 
   const iptConclusion = document.getElementById("iptConclusion");
@@ -569,9 +578,7 @@ function resetToDefault() {
 // ==========================================
 
 function getFormattedRoomSpec() {
-  const { roomType, hasPlusOne } = getCurrentLayoutState();
-  const suiteSel = document.getElementById("selSuiteCount");
-  const suiteCount = suiteSel ? suiteSel.value : "0";
+  const { roomType, hasPlusOne, suiteCount } = getCurrentLayoutState();
   return `${roomType}${hasPlusOne ? "+1" : ""}房/${suiteCount}套房`;
 }
 
@@ -843,6 +850,11 @@ function confirmImportFromAI() {
       if (chk) chk.checked = !!data.hasPlusOne;
     }
 
+    if (data.hasBonusZhongDao !== undefined) {
+      const chk = document.getElementById("chkBonusZhongDao");
+      if (chk) chk.checked = !!data.hasBonusZhongDao;
+    }
+
     if (data.conclusion !== undefined) {
       const el = document.getElementById("iptConclusion");
       if (el) el.value = data.conclusion;
@@ -883,10 +895,7 @@ function confirmImportFromAI() {
 
     if (data.suiteCount !== undefined) {
       const selSuite = document.getElementById("selSuiteCount");
-      if (selSuite) {
-        selSuite.value = data.suiteCount;
-        applySuiteAllocation(parseInt(data.suiteCount), parseInt(data.roomType ?? 2));
-      }
+      if (selSuite) selSuite.value = data.suiteCount;
     }
 
     updateLayoutConfig();
@@ -901,8 +910,8 @@ function confirmImportFromAI() {
 
 function exportCurrentJSON() {
   try {
-    const { roomType, hasPlusOne } = getCurrentLayoutState();
-    const suiteSel = document.getElementById("selSuiteCount");
+    const { roomType, hasPlusOne, suiteCount } = getCurrentLayoutState();
+    const chkBonusZD = document.getElementById("chkBonusZhongDao");
     const selections = {};
     spaces.forEach(sp => { selections[sp.id] = sp.criteria.map(c => c.d); });
 
@@ -911,7 +920,8 @@ function exportCurrentJSON() {
       unitNumber: getIptVal("iptUnitNumber"),
       roomType: String(roomType),
       hasPlusOne: hasPlusOne,
-      suiteCount: suiteSel ? parseInt(suiteSel.value) : 1,
+      suiteCount: suiteCount,
+      hasBonusZhongDao: chkBonusZD ? chkBonusZD.checked : false,
       disabledSpaces: spaces.filter(sp => sp.userActive === false).map(sp => sp.id),
       conclusion: getIptVal("iptConclusion"),
       selections: selections
@@ -952,6 +962,7 @@ window.closeAiModal = closeAiModal;
 window.confirmImportFromAI = confirmImportFromAI;
 window.exportCurrentJSON = exportCurrentJSON;
 window.toggleSpaceActive = toggleSpaceActive;
+window.toggleBonusSpace = toggleBonusSpace;
 window.applyExtremePreset = applyExtremePreset;
 window.updateRadarChart = updateRadarChart;
 window.setPreset = setPreset;
