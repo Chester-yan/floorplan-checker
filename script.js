@@ -516,11 +516,14 @@ function togglePlusOne(checked) {
 }
 
 /**
- * 一鍵套用最高標分 / 最低標分：
- * 保持目前設定的套房數量與特殊空間開關，清除異常停用狀態，只針對畫面上可見之空間進行選項切換
+ * 一鍵套用分數預設功能：
+ * max: 選取最高分選項 (包含 >1.0 的豪宅頂規加分)
+ * standard: 選取 = 1.0 的選項 (標準配備，必備總分剛好達 100.0 滿分)
+ * min: 選取最低分選項 (及格低標，必備總分剛好達 60.0 分)
+ * @param {'max'|'standard'|'min'} mode
  */
 function applyExtremePreset(mode) {
-  // 1. 先還原所有空間的有效啟用狀態 (清除先前被停用的反灰狀態)
+  // 1. 還原所有空間的有效啟用狀態
   spaces.forEach(sp => {
     sp.userActive = true;
     const chk = document.getElementById(`toggle_${sp.id}`);
@@ -532,18 +535,27 @@ function applyExtremePreset(mode) {
     }
   });
 
-  // 2. 針對目前畫面上啟用且顯示的空間，切換最高標或最低標選項
+  // 2. 針對目前已啟用且可見之空間切換選項
   spaces.forEach((sp) => {
     if (!sp.enabled || sp.userActive === false) return;
 
     sp.criteria.forEach((crit, critIdx) => {
-      const validOpts = crit.opts.map((opt, idx) => ({ ...opt, origIdx: idx })).filter(opt => typeof opt.v === 'number');
+      const validOpts = crit.opts.map((opt, idx) => ({ ...opt, origIdx: idx }))
+                                 .filter(opt => typeof opt.v === 'number');
       if (!validOpts.length) return;
 
       let targetOpt;
       if (mode === 'max') {
+        // 最高標分：挑選數值最大者 (包含 1.2, 1.4, 1.6 等頂規加分)
         targetOpt = validOpts.reduce((prev, curr) => (curr.v > prev.v ? curr : prev));
+      } else if (mode === 'standard') {
+        // 標準滿分：優先挑選 v === 1.0 的標準配備；若無剛好 1.0 則挑選最接近且大於 0 的及格選項
+        targetOpt = validOpts.find(o => o.v === 1.0);
+        if (!targetOpt) {
+          targetOpt = validOpts.reduce((prev, curr) => Math.abs(curr.v - 1.0) < Math.abs(prev.v - 1.0) ? curr : prev);
+        }
       } else {
+        // 最低標分：挑選最小值
         targetOpt = validOpts.reduce((prev, curr) => (curr.v < prev.v ? curr : prev));
       }
 
