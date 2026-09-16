@@ -12,10 +12,10 @@ const SPACE_WEIGHTS = {
   4: { xuan_guan: 6, ke_ting: 12, can_ting: 10, chu_fang: 10, yang_tai: 7, zhu_wo: 12, zhu_wo_bath: 10, ke_yu: 10, ci_wo_1: 8, ci_wo_2: 8, ci_wo_3: 7 }
 };
 
-// 各空間專屬標準 60 分及格選項索引對應表 (依據 12 個實體空間截圖基準)
+// 各空間專屬標準 60 分及格選項索引對應表 (基準截圖參照)
 const SPACE_PASS_INDICES = {
   xuan_guan: [1, 1, 0],              // 實得 1.2
-  ke_ting: [1, 0, 1, 0],             // 實得 1.8
+  ke_ting: [1, 0, 2, 0],             // 預設 1 房基準：實得 1.8 (客廳深度動態由 getSpacePassIndices 依房型指派)
   can_ting: [0, 1, 1],               // 實得 1.6
   chu_fang: [1, 0, 1, 0, 0, 0],      // 實得 2.2
   yang_tai: [0, 1, 0, 0, 1],         // 實得 1.4
@@ -31,6 +31,22 @@ const SPACE_PASS_INDICES = {
   zhong_dao: [3, 3, 2, 1, 1, 0],     // 實得 5.0
   plus_one: [0, 1, 1, 1]             // 實得 3.0
 };
+
+/**
+ * 依據當前房型尺度，動態取得空間及格選項索引
+ * 1房及格 >2.8m (idx: 2)
+ * 2房及格 >3.0m (idx: 4)
+ * 3房及格 >3.2m (idx: 5)
+ * 4房及格 >3.4m (idx: 6)
+ */
+function getSpacePassIndices(spaceId, roomType) {
+  if (spaceId === "ke_ting") {
+    const depthPassIdxMap = { 1: 2, 2: 4, 3: 5, 4: 6 };
+    const depthIdx = depthPassIdxMap[roomType] ?? 4;
+    return [1, 0, depthIdx, 0];
+  }
+  return SPACE_PASS_INDICES[spaceId] || [];
+}
 
 // 通用浴室選項範本 (8項指標)
 const bathCriteriaTemplate = [
@@ -87,7 +103,20 @@ let spaces = [
     criteria: [
       { name: "空間採光", opts: [{ l: "無採光", v: "not ok" }, { l: "間接採光", v: 0.6 }, { l: "直接採光", v: 1.0 }], d: 2 },
       { name: "連接陽台", opts: [{ l: "無連接", v: 0 }, { l: "有連接", v: 1.0 }], d: 0 },
-      { name: "客廳深度", opts: [{ l: "<2.8m", v: "not ok" }, { l: "<3~2.8m", v: 0.6 }, { l: "≥3m", v: 1.0 }, { l: ">3.2m", v: 1.2 }, { l: ">3.6m", v: 1.4 }], d: 2 },
+      { 
+        name: "客廳深度", 
+        opts: [
+          { l: "<2.7m", v: "not ok" },
+          { l: "≥2.7m", v: 0.4 },
+          { l: ">2.8m", v: 0.6 },
+          { l: ">2.9m", v: 0.8 },
+          { l: ">3m", v: 1.0 },
+          { l: ">3.2m", v: 1.2 },
+          { l: ">3.4m", v: 1.4 },
+          { l: ">3.6m", v: 1.6 }
+        ], 
+        d: 4 
+      },
       { name: "沙發座數", opts: [{ l: "<居住人數", v: 0.6 }, { l: "符合居住人數", v: 1.0 }], d: 1 }
     ]
   },
@@ -383,7 +412,6 @@ function toggleSpaceActive(spaceId, isActive) {
   if (card) {
     card.classList.toggle("is-disabled", !isActive);
     card.querySelectorAll("select.crit-select").forEach(sel => sel.disabled = !isActive);
-    // 重新打勾啟用時，防呆鎖定兩件式三角配置
     if (isActive) syncTriangleState(sp);
   }
   calculateAll();
@@ -446,12 +474,10 @@ function isBaselineRequiredSpace(spaceId, roomType, hasPlusOne) {
 
 function isBonusSpace(spaceId, roomType, hasPlusOne) {
   if (roomType === 1 && !hasPlusOne && spaceId === "xuan_guan") return true;
-  // 依要求：維持 2 房規劃主臥套房為外加加分項
   if (roomType === 2 && spaceId === "zhu_wo_bath") return true;
   const secondarySuiteBaths = ["ci_wo_1_bath", "ci_wo_2_bath", "ci_wo_3_bath"];
   if (secondarySuiteBaths.includes(spaceId)) return true;
   if (spaceId === "zhong_dao") return true;
-  // ＋1 房納入加分空間
   if (spaceId === "plus_one" && hasPlusOne) return true;
   return false;
 }
@@ -461,7 +487,6 @@ function getBonusMaxScore(spaceId) {
   if (spaceId === "zhu_wo_bath") return 10.0;
   if (["ci_wo_1_bath", "ci_wo_2_bath", "ci_wo_3_bath"].includes(spaceId)) return 10.0;
   if (spaceId === "zhong_dao") return 6.0;
-  // ＋1 房最高外加 6.0 分
   if (spaceId === "plus_one") return 6.0;
   return 0.0;
 }
@@ -480,20 +505,26 @@ function calculateAll() {
     let spLow = 0, spPass = 0, spStd = 0, spHigh = 0, spRaw = 0;
     let hasNotOk = false;
     const isBonus = isBonusSpace(sp.id, roomType, hasPlusOne);
-    const passIndices = SPACE_PASS_INDICES[sp.id] || [];
+    const passIndices = getSpacePassIndices(sp.id, roomType);
 
     sp.criteria.forEach((crit, critIdx) => {
       const validScores = crit.opts.filter(o => typeof o.v === 'number').map(o => o.v);
       const minVal = validScores.length ? Math.min(...validScores) : 0;
       const maxVal = validScores.length ? Math.max(...validScores) : 0;
 
-      // 1. 滿分標準點數 (std)：所有指標選在 1.0 (或預設標準配置)
-      const hasOne = crit.opts.some(o => o.v === 1.0);
-      const defaultIdx = defaultSpacesData[spIdx]?.criteria[critIdx]?.d ?? 0;
-      const defaultVal = typeof crit.opts[defaultIdx]?.v === 'number' ? crit.opts[defaultIdx].v : 0;
-      const stdVal = hasOne ? 1.0 : defaultVal;
+      // 1. 滿分標準點數 (std)：客廳深度隨房型尺度階梯式提升
+      let stdVal;
+      if (sp.id === "ke_ting" && crit.name === "客廳深度") {
+        const depthStdValMap = { 1: 1.0, 2: 1.2, 3: 1.4, 4: 1.6 };
+        stdVal = depthStdValMap[roomType] ?? 1.2;
+      } else {
+        const hasOne = crit.opts.some(o => o.v === 1.0);
+        const defaultIdx = defaultSpacesData[spIdx]?.criteria[critIdx]?.d ?? 0;
+        const defaultVal = typeof crit.opts[defaultIdx]?.v === 'number' ? crit.opts[defaultIdx].v : 0;
+        stdVal = hasOne ? 1.0 : defaultVal;
+      }
 
-      // 2. 60分及格點數 (pass)：依據 12 張實體空間截圖嚴格定義之及格基準
+      // 2. 60分及格點數 (pass)：依據空間基準與當前房型動態指派
       const pIdx = passIndices[critIdx] ?? 0;
       const pVal = crit.opts[pIdx]?.v;
       const passVal = typeof pVal === 'number' ? pVal : 0;
@@ -519,7 +550,6 @@ function calculateAll() {
       spRaw = 0;
     }
 
-    // 將數值直接存入空間物件，確保雷達圖與引擎 100% 數學同頻
     sp.spLow = spLow;
     sp.spPass = spPass;
     sp.spStd = spStd;
@@ -528,7 +558,6 @@ function calculateAll() {
     sp.hasNotOk = hasNotOk;
 
     if (sp.enabled && sp.userActive !== false) {
-      // 低標加總嚴格統計各空間最低選項加總 (如主臥 2.8、次臥 2.2)
       totalLowSum += spLow;
       totalHighSum += spHigh;
       rawSum += spRaw;
@@ -538,14 +567,11 @@ function calculateAll() {
     let spacePercentScore = 0;
     if (sp.enabled && sp.userActive !== false && !hasNotOk && spRaw > 0) {
       if (spRaw < spPass) {
-        // 第一段：低於及格標準 (0 ~ 60 分連續線性過渡)
         spacePercentScore = spPass > 0 ? (60 * (spRaw / spPass)) : 0;
       } else if (spRaw <= spStd) {
-        // 第二段：及格至標準滿分 (60 ~ 100 分連續線性過渡)
         const ratio = (spStd > spPass) ? (spRaw - spPass) / (spStd - spPass) : 1.0;
         spacePercentScore = 60 + 40 * ratio;
       } else {
-        // 第三段：頂規加分突破 (100 ~ 120 分)
         const extraRatio = (spHigh > spStd) ? (spRaw - spStd) / (spHigh - spStd) : 0;
         spacePercentScore = 100 + 20 * extraRatio;
       }
@@ -559,7 +585,6 @@ function calculateAll() {
       totalBaseScore += weight * (spacePercentScore / 100);
     }
 
-    // 更新各卡片數據 (低標顯示 spLow，滿分顯示 spStd，與截圖完全一致)
     const elLow = document.getElementById(`low_${sp.id}`);
     const elStd = document.getElementById(`std_${sp.id}`);
     const elHigh = document.getElementById(`high_${sp.id}`);
@@ -583,7 +608,6 @@ function calculateAll() {
   if (finalEl) {
     finalEl.innerText = finalScore.toFixed(1);
     
-    // >= 59.5 均認定為及格合格顏色
     finalEl.style.color = finalScore > 100 
       ? "#b45309" 
       : finalScore >= 80 
@@ -595,10 +619,6 @@ function calculateAll() {
 
   updateRadarChart();
 }
-
-// ==========================================
-// 房型設定、套房配置與極端值套用
-// ==========================================
 
 function setPreset(roomNum, shouldAllocate = true) {
   const selEl = document.getElementById("selBedrooms");
@@ -644,13 +664,14 @@ function togglePlusOne(checked) {
 /**
  * 一鍵套用分數預設功能：
  * max: 選取最高分選項 (包含 >1.0 的豪宅頂規加分)
- * standard: 選取 = 1.0 的選項 (標準配備，必備總分精準達 100.0 滿分)
- * pass: 精確套用 12 空間定義之及格選項 (必備總分精準達 60.0 及格分)
- * min: 選取除了 not ok 之外的最低數值選項 (排除致命硬傷後的絕對最低配置)
+ * standard: 選取標準滿分配置 (客廳深度隨 1~4 房動態適配 3.0m / 3.2m / 3.4m / 3.6m)
+ * pass: 精確套用及格配置 (客廳深度隨 1~4 房動態適配 2.8m / 3.0m / 3.2m / 3.4m)
+ * min: 選取除了 not ok 之外的最低數值選項
  * @param {'max'|'standard'|'pass'|'min'} mode
  */
 function applyExtremePreset(mode) {
-  // 1. 還原所有空間的有效啟用狀態
+  const { roomType } = getCurrentLayoutState();
+
   spaces.forEach(sp => {
     sp.userActive = true;
     const chk = document.getElementById(`toggle_${sp.id}`);
@@ -662,33 +683,35 @@ function applyExtremePreset(mode) {
     }
   });
 
-  // 2. 針對目前已啟用且可見之空間切換選項
   spaces.forEach((sp, spIdx) => {
     if (!sp.enabled || sp.userActive === false) return;
 
     sp.criteria.forEach((crit, critIdx) => {
-      // 關鍵過濾：排除 "not ok"，僅保留純數值選項
       const validOpts = crit.opts.map((opt, idx) => ({ ...opt, origIdx: idx }))
                                  .filter(opt => typeof opt.v === 'number');
       if (!validOpts.length) return;
 
       let targetOpt;
       if (mode === 'max') {
-        // ★ 最高標分：挑選數值最大者 (包含 >1.0 加分)
         targetOpt = validOpts.reduce((prev, curr) => (curr.v > prev.v ? curr : prev));
       } else if (mode === 'standard') {
-        // ✔ 標準滿分：選取 1.0 標準配置
-        targetOpt = validOpts.find(o => o.v === 1.0);
-        if (!targetOpt) {
-          const defaultOrigIdx = defaultSpacesData[spIdx]?.criteria[critIdx]?.d ?? 0;
-          targetOpt = validOpts.find(o => o.origIdx === defaultOrigIdx) || validOpts[0];
+        // 客廳深度滿分標準隨房型尺度動態切換
+        if (sp.id === "ke_ting" && crit.name === "客廳深度") {
+          const depthStdIdxMap = { 1: 4, 2: 5, 3: 6, 4: 7 };
+          const targetIdx = depthStdIdxMap[roomType] ?? 5;
+          targetOpt = validOpts.find(o => o.origIdx === targetIdx) || validOpts[0];
+        } else {
+          targetOpt = validOpts.find(o => o.v === 1.0);
+          if (!targetOpt) {
+            const defaultOrigIdx = defaultSpacesData[spIdx]?.criteria[critIdx]?.d ?? 0;
+            targetOpt = validOpts.find(o => o.origIdx === defaultOrigIdx) || validOpts[0];
+          }
         }
       } else if (mode === 'pass') {
-        // ● 及格分：精確套用各空間定義之 60 分基準選項
-        const pIdx = SPACE_PASS_INDICES[sp.id]?.[critIdx] ?? 0;
+        const passIndices = getSpacePassIndices(sp.id, roomType);
+        const pIdx = passIndices[critIdx] ?? 0;
         targetOpt = validOpts.find(o => o.origIdx === pIdx) || validOpts[0];
       } else {
-        // ▲ 最低分：挑選數值最小者 (已自動排除 not ok，允許選到 0 或 0.2/0.4/0.6 等低分)
         targetOpt = validOpts.reduce((prev, curr) => (curr.v < prev.v ? curr : prev));
       }
 
@@ -773,11 +796,6 @@ function updateSpecTitle() {
   } catch (e) { }
 }
 
-/**
- * 繪製或更新 Chart.js 雷達圖：
- * 1. 直接讀取空間物件記憶體數據 (sp.spPass, sp.spStd, sp.spHigh, sp.spRaw)
- * 2. 坐標軸步進值細化為 10 一度 (stepSize: 10)
- */
 function updateRadarChart() {
   const canvas = document.getElementById("radarChart");
   if (!canvas || typeof Chart === "undefined") return;
@@ -820,7 +838,6 @@ function updateRadarChart() {
     }
   });
 
-  // 動態擴展雷達圖上限 (步進細化為 10 的倍數)
   const maxVal = Math.max(...dataValues, 100);
   const dynamicMax = Math.ceil(maxVal / 10) * 10;
 
