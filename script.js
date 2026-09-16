@@ -394,18 +394,6 @@ function isBonusSpace(spaceId, roomType, hasPlusOne) {
 }
 
 /**
- * 取得加分空間的最高外加點數上限
- */
-function getBonusMaxScore(spaceId, roomType) {
-  if (spaceId === "xuan_guan" && roomType === 1) return 8.0;
-  // 2 房規劃主臥套浴給予最高 +8 分突破獎勵
-  if (spaceId === "zhu_wo_bath" && roomType === 2) return 8.0;
-  if (["ci_wo_1_bath", "ci_wo_2_bath", "ci_wo_3_bath"].includes(spaceId)) return 6.0;
-  if (spaceId === "zhong_dao") return 6.0;
-  return 0.0;
-}
-
-/**
  * 全案評分引擎核心 (空間權重分配制)
  */
 function calculateAll() {
@@ -418,31 +406,13 @@ function calculateAll() {
   let totalLowSum = 0.0;   
   let totalHighSum = 0.0;  
 
-  // 檢查是否處於一鍵「最低標」或「最高標」狀態，以便強制收斂百分制分數
-  const isAllMinPreset = spaces.every(sp => {
-    if (!sp.enabled || sp.userActive === false || isBonusSpace(sp.id, roomType, hasPlusOne)) return true;
-    return sp.criteria.every(c => {
-      const validOpts = c.opts.filter(o => typeof o.v === 'number');
-      const minV = Math.min(...validOpts.map(o => o.v));
-      return c.opts[c.d].v === minV;
-    });
-  });
-
-  const isAllMaxPreset = spaces.every(sp => {
-    if (!sp.enabled || sp.userActive === false || isBonusSpace(sp.id, roomType, hasPlusOne)) return true;
-    return sp.criteria.every(c => {
-      const validOpts = c.opts.filter(o => typeof o.v === 'number');
-      const maxV = Math.max(...validOpts.map(o => o.v));
-      return c.opts[c.d].v === maxV;
-    });
-  });
-
   spaces.forEach((sp) => {
     let spLow = 0, spHigh = 0, spRaw = 0;
     let hasNotOk = false;
     const isRequired = isBaselineRequiredSpace(sp.id, roomType, hasPlusOne);
     const isBonus = isBonusSpace(sp.id, roomType, hasPlusOne);
 
+    // 計算每個指標的高低標
     sp.criteria.forEach((crit) => {
       const validScores = crit.opts.filter(o => typeof o.v === 'number').map(o => o.v);
       const minVal = validScores.length ? Math.min(...validScores) : 0;
@@ -463,48 +433,48 @@ function calculateAll() {
       }
     });
 
+    // 只要有致命傷 not ok，該空間原始實得分歸 0
     if (hasNotOk) {
       spRaw = 0;
     }
 
+    // 統計啟用空間的總高標與總低標
     if (sp.enabled && sp.userActive !== false) {
       totalLowSum += spLow;
       totalHighSum += spHigh;
     }
 
-    // 計算空間得分與權重折算
-    if (isBonus) {
-      let spRatio = 0.0;
-      if (sp.enabled && sp.userActive !== false && spRaw > 0 && spHigh > spLow) {
-        spRatio = Math.max(0, Math.min(1, (spRaw - spLow) / (spHigh - spLow)));
-      } else if (sp.enabled && sp.userActive !== false && spHigh === spLow) {
-        spRatio = 1.0;
+    // 計算內部比例 (0.0 ~ 1.0)
+    let ratio = 0.0;
+    if (sp.enabled && sp.userActive !== false && spRaw > 0) {
+      if (spHigh > spLow) {
+        ratio = Math.max(0, Math.min(1, (spRaw - spLow) / (spHigh - spLow)));
+      } else {
+        ratio = 1.0;
       }
+    }
+
+    // 分流計算：加分空間 vs 必備空間
+    if (isBonus) {
+      // 加分空間：不佔 100 分基準，外加獎勵分 (依表現給予 0 ~ maxBonus)
       const maxBonus = getBonusMaxScore(sp.id, roomType);
-      totalBonusScore += (spRatio * maxBonus);
+      totalBonusScore += (ratio * maxBonus);
       if (sp.enabled && sp.userActive !== false) {
         rawSum += spRaw;
       }
     } else {
+      // 必備空間：權重百分制 (基準及格 60% ~ 滿分 100%)
       const weight = currentWeights[sp.id] || 0;
       let spaceFinalScore = 0;
-      
+
       if (sp.enabled && sp.userActive !== false && !hasNotOk) {
-        if (isAllMinPreset) {
-          // 強制收斂：點選最低標時，每個必備空間剛好拿該權重的 60%
-          spaceFinalScore = weight * 0.6;
-        } else if (isAllMaxPreset) {
-          // 強制收斂：點選最高分時，每個必備空間剛好拿該權重的 100%
-          spaceFinalScore = weight;
-        } else {
-          if (spHigh > spLow) {
-            const ratio = Math.max(0, Math.min(1, (spRaw - spLow) / (spHigh - spLow)));
-            spaceFinalScore = weight * (0.6 + 0.4 * ratio);
-          } else {
-            spaceFinalScore = weight;
-          }
-        }
+        // 合格時基本起跳拿權重的 60%，優良指標往上拿到 100%
+        spaceFinalScore = weight * (0.6 + 0.4 * ratio);
+      } else {
+        // 未留設或出現致命硬傷 (not ok)，直接歸 0，損失該空間完整權重！
+        spaceFinalScore = 0;
       }
+
       totalBaseScore += spaceFinalScore;
 
       if (sp.enabled && sp.userActive !== false) {
@@ -512,7 +482,7 @@ function calculateAll() {
       }
     }
 
-    // 更新卡片右上角數據
+    // 即時更新個別卡片數據
     const elLow = document.getElementById(`low_${sp.id}`);
     const elHigh = document.getElementById(`high_${sp.id}`);
     const elRaw = document.getElementById(`raw_${sp.id}`);
@@ -521,7 +491,7 @@ function calculateAll() {
     if (elRaw) elRaw.innerText = (sp.enabled && sp.userActive !== false ? spRaw : 0).toFixed(1);
   });
 
-  // 四個關鍵數字的 DOM 呈現綁定
+  // 四個核心統計數據更新
   const dispLowSum = document.getElementById("dispLowSum");
   const dispHighSum = document.getElementById("dispHighSum");
   const dispRaw = document.getElementById("dispRaw");
@@ -530,12 +500,8 @@ function calculateAll() {
   if (dispHighSum) dispHighSum.innerText = totalHighSum.toFixed(1); // 2. 高標分數加總
   if (dispRaw) dispRaw.innerText = rawSum.toFixed(1);             // 3. 實得分數加總
 
-  // 4. 轉換百分制之分數（最終綜合得分）
-  let finalScore = totalBaseScore + totalBonusScore;
-  
-  // 防呆極端收斂校正
-  if (isAllMinPreset && totalBonusScore === 0) finalScore = 60.0;
-  if (isAllMaxPreset && totalBonusScore === 0) finalScore = 100.0;
+  // 4. 轉換百分制分數 (必備加權基礎分 + 加分空間外加分)
+  const finalScore = totalBaseScore + totalBonusScore;
 
   const finalEl = document.getElementById("dispFinal");
   if (finalEl) {
@@ -646,20 +612,20 @@ function togglePlusOne(checked) {
 }
 
 /**
- * 一鍵套用極端值功能：
- * max: 將所有「當前已啟用且顯示」的空間指標改為最高分 (必備總分精準達 100)
- * min: 將所有「當前已啟用且顯示」的空間指標改為最低合格標分 (必備總分精準達 60)
- * @param {'max'|'min'} mode - 'max': 最高分, 'min': 最低合格標分
+ * 一鍵套用極端值功能 (絕對不破壞加分空間開關狀態)
+ * max: 將當前啟用的必備空間全數選在最高分 (總分精準等於 100.0)
+ * min: 將當前啟用的必備空間全數選在最低合格分 (總分精準等於 60.0)
  */
 function applyExtremePreset(mode) {
   const { roomType, hasPlusOne } = getCurrentLayoutState();
 
   spaces.forEach((sp) => {
-    // 嚴格過濾：必須是當前佈局下「啟用」且「畫面上可見」的空間，絕對不碰未啟用的加分空間！
-    const isRequired = isBaselineRequiredSpace(sp.id, roomType, hasPlusOne);
-    const isVisibleBonus = isBonusSpace(sp.id, roomType, hasPlusOne) && sp.userActive !== false;
+    // 嚴格隔離：只調整當前已經啟用、且畫面上看得見的空間
+    if (!sp.enabled || sp.userActive === false) return;
     
-    if (!sp.enabled || (!isRequired && !isVisibleBonus)) return;
+    // 如果是加分空間（例如次臥衛浴、中島），且使用者未手動開啟，絕不自動套用！
+    const isRequired = isBaselineRequiredSpace(sp.id, roomType, hasPlusOne);
+    if (!isRequired && !sp.enabled) return;
 
     sp.criteria.forEach((crit, critIdx) => {
       const validOpts = crit.opts.map((opt, idx) => ({ ...opt, origIdx: idx })).filter(opt => typeof opt.v === 'number');
@@ -667,11 +633,11 @@ function applyExtremePreset(mode) {
 
       let targetOpt;
       if (mode === 'max') {
+        // 最高分：挑選數值最大的選項
         targetOpt = validOpts.reduce((prev, curr) => (curr.v > prev.v ? curr : prev));
       } else {
-        const positiveOpts = validOpts.filter(o => o.v > 0);
-        const pool = positiveOpts.length ? positiveOpts : validOpts;
-        targetOpt = pool.reduce((prev, curr) => (curr.v < prev.v ? curr : prev));
+        // 最低及格分：挑選數值最小的選項 (剛好等於 spLow，使 ratio 精確等於 0，總分精確等於 60.0)
+        targetOpt = validOpts.reduce((prev, curr) => (curr.v < prev.v ? curr : prev));
       }
 
       crit.d = targetOpt.origIdx;
@@ -679,7 +645,7 @@ function applyExtremePreset(mode) {
     });
   });
 
-  updateLayoutConfig();
+  calculateAll();
   updateSpecTitle();
 }
 
