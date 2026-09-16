@@ -4,7 +4,7 @@
 
 let radarChartInstance = null;
 
-// 各房型必備空間固定權重配置表 (加總嚴格鎖定為 100 分)[cite: 1]
+// 各房型必備空間固定權重配置表 (加總嚴格鎖定為 100 分)
 const SPACE_WEIGHTS = {
   1: { ke_ting: 22, can_ting: 6, chu_fang: 12, yang_tai: 16, zhu_wo: 24, ke_yu: 20 },
   2: { xuan_guan: 7, ke_ting: 14, can_ting: 11, chu_fang: 11, yang_tai: 11, zhu_wo: 16, ke_yu: 15, ci_wo_1: 15 },
@@ -12,24 +12,24 @@ const SPACE_WEIGHTS = {
   4: { xuan_guan: 5, ke_ting: 16, can_ting: 10, chu_fang: 10, yang_tai: 10, zhu_wo: 12, zhu_wo_bath: 12, ke_yu: 10, ci_wo_1: 7, ci_wo_2: 7, ci_wo_3: 7 }
 };
 
-// 各空間專屬標準 60 分及格選項索引對應表 (基準截圖參照)[cite: 1]
+// 各空間專屬標準 60 分及格選項索引對應表 (基準截圖參照)
 const SPACE_PASS_INDICES = {
-  xuan_guan: [1, 1, 0],              // 實得 1.2[cite: 1]
-  ke_ting: [1, 0, 2, 0],             // 預設 1 房基準：實得 1.8 (客廳深度動態由 getSpacePassIndices 依房型指派)[cite: 1]
-  can_ting: [0, 1, 1],               // 實得 1.6[cite: 1]
-  chu_fang: [1, 0, 1, 0, 0, 0],      // 實得 2.2[cite: 1]
-  yang_tai: [0, 1, 0, 0, 1],         // 實得 1.4[cite: 1]
-  zhu_wo: [2, 0, 2, 2, 5, 1, 1, 1, 2], // 實得 8.0[cite: 1]
-  ci_wo_1: [1, 0, 2, 2, 3, 1, 1, 1, 1], // 實得 7.4[cite: 1]
-  ci_wo_2: [1, 0, 2, 2, 3, 1, 1, 1, 1], //[cite: 1]
-  ci_wo_3: [1, 0, 2, 2, 3, 1, 1, 1, 1], //[cite: 1]
-  zhu_wo_bath: [0, 1, 1, 1, 2, 0, 0, 0], // 實得 2.8[cite: 1]
-  ci_wo_1_bath: [0, 1, 1, 1, 2, 0, 0, 0], //[cite: 1]
-  ci_wo_2_bath: [0, 1, 1, 1, 2, 0, 0, 0], //[cite: 1]
-  ci_wo_3_bath: [0, 1, 1, 1, 2, 0, 0, 0], //[cite: 1]
-  ke_yu: [0, 1, 1, 1, 2, 0, 1, 1],   // 實得 4.8[cite: 1]
-  zhong_dao: [3, 3, 2, 1, 1, 0],     // 實得 5.0[cite: 1]
-  plus_one: [0, 1, 1, 1]             // 實得 3.0[cite: 1]
+  xuan_guan: [1, 1, 0],              // 實得 1.2
+  ke_ting: [1, 0, 2, 0],             // 預設 1 房基準：實得 1.8 (客廳深度動態由 getSpacePassIndices 依房型指派)
+  can_ting: [0, 1, 1],               // 實得 1.6
+  chu_fang: [1, 0, 1, 0, 0, 0],      // 實得 2.2
+  yang_tai: [0, 1, 0, 0, 1],         // 實得 1.4
+  zhu_wo: [2, 0, 2, 2, 5, 1, 1, 1, 2], // 實得 8.0
+  ci_wo_1: [1, 0, 2, 2, 3, 1, 1, 1, 1], // 實得 7.4
+  ci_wo_2: [1, 0, 2, 2, 3, 1, 1, 1, 1],
+  ci_wo_3: [1, 0, 2, 2, 3, 1, 1, 1, 1],
+  zhu_wo_bath: [0, 1, 1, 1, 2, 0, 0, 0], // 實得 2.8
+  ci_wo_1_bath: [0, 1, 1, 1, 2, 0, 0, 0],
+  ci_wo_2_bath: [0, 1, 1, 1, 2, 0, 0, 0],
+  ci_wo_3_bath: [0, 1, 1, 1, 2, 0, 0, 0],
+  ke_yu: [0, 1, 1, 1, 2, 0, 1, 1],   // 實得 4.8
+  zhong_dao: [3, 3, 2, 1, 1, 0],     // 實得 5.0
+  plus_one: [0, 1, 1, 1]             // 實得 3.0
 };
 
 /**
@@ -859,21 +859,21 @@ function updateRadarChart() {
       label: "標準滿分線 (100分)",
       data: highThresholdData,
       backgroundColor: "transparent",
-      borderColor: "rgba(22, 163, 74, 0.7)",
-      borderWidth: 1.8,
-      borderDash: [4, 4],
-      pointRadius: 0,
-      order: 2
-    },
-    {
-      label: "低標合格線 (60分)",
-      data: lowThresholdData,
-      backgroundColor: "transparent",
       borderColor: "rgba(220, 38, 38, 0.6)",
       borderWidth: 1.5,
       borderDash: [3, 3],
       pointRadius: 0,
       order: 3
+    },
+    {
+      label: "標準滿分線 (100分)",
+      data: highThresholdData,
+      backgroundColor: "transparent",
+      borderColor: "rgba(22, 163, 74, 0.7)",
+      borderWidth: 1.8,
+      borderDash: [4, 4],
+      pointRadius: 0,
+      order: 2
     }
   ];
 
@@ -1172,7 +1172,7 @@ function exportCurrentJSON() {
 }
 
 // ==========================================
-// 全域掛載
+// 全域掛載與主動渲染雙保險
 // ==========================================
 
 window.triggerReupload = triggerReupload;
@@ -1194,4 +1194,8 @@ window.exportReportPDF = exportReportPDF;
 window.resetToDefault = resetToDefault;
 window.renderSpaces = renderSpaces;
 
-window.onload = renderSpaces;
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", renderSpaces);
+} else {
+  renderSpaces();
+}
