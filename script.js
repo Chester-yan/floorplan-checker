@@ -302,6 +302,7 @@ function toggleBonusSpace(spaceId, isChecked) {
 function updateLayoutConfig() {
   const { roomType, hasPlusOne, suiteCount } = getCurrentLayoutState();
 
+  // 基礎核心空間常態啟用
   ["ke_ting", "can_ting", "chu_fang", "yang_tai", "zhu_wo", "ke_yu"].forEach(id => setEnable(id, true));
 
   // 玄關：2房以上或1+1房為必備；1房未+1時由表頭加分勾選控制
@@ -311,22 +312,22 @@ function updateLayoutConfig() {
   if (lblBonusXG) lblBonusXG.style.display = (roomType === 1 && !hasPlusOne) ? "inline-flex" : "none";
   setEnable("xuan_guan", isXuanGuanRequired || (chkBonusXG ? chkBonusXG.checked : false));
 
-  // 次臥房開合
+  // 次臥房依房型開合
   setEnable("ci_wo_1", roomType >= 2);
   setEnable("ci_wo_2", roomType >= 3);
   setEnable("ci_wo_3", roomType >= 4);
 
-  // 套房衛浴依套房數量嚴格循序啟用：主臥 -> 次臥1 -> 次臥2 -> 次臥3
-  // 3房以上主臥套房為必備基準；其餘依套房數量遞增
+  // 套房衛浴嚴格依套房數量循序啟用：
+  // 3房以上主臥套浴為必備基準；1、2房則依套房數 >= 1 啟用
   const hasZhuWoBath = (roomType >= 3) || (suiteCount >= 1);
   setEnable("zhu_wo_bath", hasZhuWoBath);
-  setEnable("ci_wo_1_bath", roomType >= 2 && suiteCount >= (roomType >= 3 ? 2 : 2));
+  setEnable("ci_wo_1_bath", roomType >= 2 && suiteCount >= 2);
   setEnable("ci_wo_2_bath", roomType >= 3 && suiteCount >= 3);
   setEnable("ci_wo_3_bath", roomType >= 4 && suiteCount >= 4);
 
   setEnable("plus_one", hasPlusOne);
 
-  // 獨立中島空間：全由表頭勾選控制
+  // 獨立中島空間：由表頭勾選控制
   const chkBonusZD = document.getElementById("chkBonusZhongDao");
   setEnable("zhong_dao", chkBonusZD ? chkBonusZD.checked : false);
 
@@ -508,9 +509,22 @@ function togglePlusOne(checked) {
 
 /**
  * 一鍵套用最高標分 / 最低標分：
- * 保持目前設定的套房數量與特殊空間開關，只針對畫面上可見之空間進行選項切換
+ * 保持目前設定的套房數量與特殊空間開關，清除異常停用狀態，只針對畫面上可見之空間進行選項切換
  */
 function applyExtremePreset(mode) {
+  // 1. 先還原所有空間的有效啟用狀態 (清除先前被停用的反灰狀態)
+  spaces.forEach(sp => {
+    sp.userActive = true;
+    const chk = document.getElementById(`toggle_${sp.id}`);
+    if (chk) chk.checked = true;
+    const card = document.getElementById(`card_${sp.id}`);
+    if (card) {
+      card.classList.remove("is-disabled");
+      card.querySelectorAll("select.crit-select").forEach(sel => sel.disabled = false);
+    }
+  });
+
+  // 2. 針對目前畫面上啟用且顯示的空間，切換最高標或最低標選項
   spaces.forEach((sp) => {
     if (!sp.enabled || sp.userActive === false) return;
 
