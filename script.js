@@ -9,7 +9,7 @@ const SPACE_WEIGHTS = {
   1: { ke_ting: 22, can_ting: 6, chu_fang: 12, yang_tai: 16, zhu_wo: 24, ke_yu: 20 },
   2: { xuan_guan: 7, ke_ting: 14, can_ting: 11, chu_fang: 11, yang_tai: 11, zhu_wo: 16, ke_yu: 15, ci_wo_1: 15 },
   3: { xuan_guan: 6, ke_ting: 15, can_ting: 10, chu_fang: 10, yang_tai: 10, zhu_wo: 11, zhu_wo_bath: 11, ke_yu: 11, ci_wo_1: 8, ci_wo_2: 8 },
-  4: { xuan_guan: 5, ke_ting: 16, can_ting: 10, chu_fang: 10, yang_tai: 10, zhu_wo: 11, zhu_wo_bath: 10, ke_yu: 10, ci_wo_1: 6, ci_wo_2: 6, ci_wo_3: 6 }
+  4: { xuan_guan: 5, ke_ting: 16, can_ting: 10, chu_fang: 10, yang_tai: 10, zhu_wo: 11, zhu_wo_bath: 11, ke_yu: 9, ci_wo_1: 6, ci_wo_2: 6, ci_wo_3: 6 }
 };
 
 // 各空間專屬標準 60 分及格選項索引對應表 (基準截圖參照)
