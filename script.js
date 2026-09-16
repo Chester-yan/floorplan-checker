@@ -4,7 +4,7 @@
 
 let radarChartInstance = null;
 
-// 各房型必備空間固定權重配置表 (加總均嚴格鎖定為 100 分)
+// 各房型必備空間固定權重配置表 (加總嚴格鎖定為 100 分)
 const SPACE_WEIGHTS = {
   1: { ke_ting: 20, can_ting: 12, chu_fang: 16, yang_tai: 12, zhu_wo: 22, ke_yu: 18 },
   2: { xuan_guan: 8, ke_ting: 15, can_ting: 11, chu_fang: 13, yang_tai: 9, zhu_wo: 16, ke_yu: 15, ci_wo_1: 13 },
@@ -12,7 +12,27 @@ const SPACE_WEIGHTS = {
   4: { xuan_guan: 6, ke_ting: 12, can_ting: 10, chu_fang: 10, yang_tai: 7, zhu_wo: 12, zhu_wo_bath: 10, ke_yu: 10, ci_wo_1: 8, ci_wo_2: 8, ci_wo_3: 7 }
 };
 
-// 通用浴室選項範本 (8項指標)
+// 各空間專屬標準 60 分及格選項索引對應表 (依據 12 張實體空間基準截圖)
+const SPACE_PASS_INDICES = {
+  xuan_guan: [1, 1, 0],              // 實得 1.2
+  ke_ting: [1, 0, 1, 0],             // 實得 1.8
+  can_ting: [0, 1, 1],               // 實得 1.6
+  chu_fang: [1, 0, 1, 0, 0, 0],      // 實得 2.2
+  yang_tai: [0, 1, 0, 0, 1],         // 實得 1.4
+  zhu_wo: [2, 0, 2, 2, 5, 1, 1, 1, 2], // 實得 8.0
+  ci_wo_1: [1, 0, 2, 2, 3, 1, 1, 1, 1], // 實得 7.4
+  ci_wo_2: [1, 0, 2, 2, 3, 1, 1, 1, 1],
+  ci_wo_3: [1, 0, 2, 2, 3, 1, 1, 1, 1],
+  zhu_wo_bath: [0, 1, 1, 1, 2, 0, 0, 0], // 實得 2.8
+  ci_wo_1_bath: [0, 1, 1, 1, 2, 0, 0, 0],
+  ci_wo_2_bath: [0, 1, 1, 1, 2, 0, 0, 0],
+  ci_wo_3_bath: [0, 1, 1, 1, 2, 0, 0, 0],
+  ke_yu: [0, 1, 1, 1, 2, 0, 1, 1],   // 實得 4.8
+  zhong_dao: [3, 3, 2, 1, 1, 0],     // 實得 5.0
+  plus_one: [0, 1, 1, 1]             // 實得 3.0
+};
+
+// 通用浴室選項範本
 const bathCriteriaTemplate = [
   { name: "開窗", opts: [{ l: "無開窗", v: 0 }, { l: "有開窗", v: 1.0 }], d: 0 },
   { name: "套件數", opts: [{ l: "兩件式", v: 0.6 }, { l: "三件式", v: 1.0 }, { l: "四件式", v: 1.2 }], d: 1 },
@@ -24,9 +44,6 @@ const bathCriteriaTemplate = [
   { name: "三角配置", opts: [{ l: "是", v: 0 }, { l: "否", v: 1.0 }], d: 1 }
 ];
 
-/**
- * 次臥房選項範本生成器
- */
 function createSecondaryBedroomCriteria() {
   return [
     { name: "空間採光", opts: [{ l: "無", v: 0 }, { l: "間接採光", v: 0.6 }, { l: "直接採光", v: 1.0 }], d: 2 },
@@ -52,7 +69,6 @@ function createSecondaryBedroomCriteria() {
   ];
 }
 
-// 系統核心空間資料庫模型
 let spaces = [
   {
     id: "xuan_guan", name: "玄關", enabled: true,
@@ -202,10 +218,6 @@ let spaces = [
 spaces.forEach(sp => { if (sp.userActive === undefined) sp.userActive = true; });
 const defaultSpacesData = JSON.parse(JSON.stringify(spaces));
 
-// ==========================================
-// 共用輔助函式
-// ==========================================
-
 const getIptVal = (id, fallback = "") => {
   const el = document.getElementById(id);
   return el && el.value.trim() ? el.value.trim() : fallback;
@@ -245,9 +257,6 @@ function setEnable(id, isEnable) {
   }
 }
 
-/**
- * 浴室選項防呆連動：兩件式時禁用「三角配置」並強制設為「否(1.0)」
- */
 function syncTriangleState(sp) {
   const suiteCrit = sp.criteria.find(c => c.name === "套件數");
   const triIdx = sp.criteria.findIndex(c => c.name === "三角配置");
@@ -271,10 +280,6 @@ function syncTriangleState(sp) {
     }
   }
 }
-
-// ==========================================
-// 空間渲染與連動控制
-// ==========================================
 
 function renderSpaces() {
   const container = document.getElementById("spacesContainer");
@@ -363,7 +368,6 @@ function toggleSpaceActive(spaceId, isActive) {
   if (card) {
     card.classList.toggle("is-disabled", !isActive);
     card.querySelectorAll("select.crit-select").forEach(sel => sel.disabled = !isActive);
-    // 連動修復 1：重新打勾啟用時，防呆鎖定兩件式三角配置
     if (isActive) syncTriangleState(sp);
   }
   calculateAll();
@@ -409,10 +413,6 @@ function updateLayoutConfig() {
   calculateAll();
 }
 
-// ==========================================
-// 評分計算與基準判定
-// ==========================================
-
 function isBaselineRequiredSpace(spaceId, roomType, hasPlusOne) {
   if (spaceId === "xuan_guan") return roomType >= 2 || (roomType === 1 && hasPlusOne);
   if (spaceId === "ci_wo_1") return roomType >= 2;
@@ -452,21 +452,27 @@ function calculateAll() {
   let totalHighSum = 0.0;  
 
   spaces.forEach((sp, spIdx) => {
-    let spLow = 0, spStd = 0, spHigh = 0, spRaw = 0;
+    let spPass = 0, spStd = 0, spHigh = 0, spRaw = 0;
     let hasNotOk = false;
     const isBonus = isBonusSpace(sp.id, roomType, hasPlusOne);
+    const passIndices = SPACE_PASS_INDICES[sp.id] || [];
 
     sp.criteria.forEach((crit, critIdx) => {
       const validScores = crit.opts.filter(o => typeof o.v === 'number').map(o => o.v);
-      const minVal = validScores.length ? Math.min(...validScores) : 0;
       const maxVal = validScores.length ? Math.max(...validScores) : 0;
 
+      // 1. 滿分標準點數 (std)：所有指標選在 1.0 (或外加項預設標準值)
       const hasOne = crit.opts.some(o => o.v === 1.0);
       const defaultIdx = defaultSpacesData[spIdx]?.criteria[critIdx]?.d ?? 0;
       const defaultVal = typeof crit.opts[defaultIdx]?.v === 'number' ? crit.opts[defaultIdx].v : 0;
       const stdVal = hasOne ? 1.0 : defaultVal;
 
-      spLow += minVal;
+      // 2. 60分及格點數 (pass)：依據 12 張實體空間截圖嚴格定義之及格基準
+      const pIdx = passIndices[critIdx] ?? 0;
+      const pVal = crit.opts[pIdx]?.v;
+      const passVal = typeof pVal === 'number' ? pVal : 0;
+
+      spPass += passVal;
       spStd += stdVal;
       spHigh += maxVal;
 
@@ -487,47 +493,43 @@ function calculateAll() {
     }
 
     if (sp.enabled && sp.userActive !== false) {
-      totalLowSum += spLow;
+      totalLowSum += spPass;
       totalHighSum += spHigh;
       rawSum += spRaw;
     }
 
-    let ratio = 0.0;
-    if (sp.enabled && sp.userActive !== false && spRaw > 0) {
-      if (spHigh > spLow) {
-        ratio = Math.max(0, (spRaw - spLow) / (spHigh - spLow));
+    // 三段式空間百分制得分計算
+    let spacePercentScore = 0;
+    if (sp.enabled && sp.userActive !== false && !hasNotOk && spRaw > 0) {
+      if (spRaw < spPass) {
+        // 第一段：低於及格標準 (0 ~ 60 分連續線性過渡)
+        spacePercentScore = spPass > 0 ? (60 * (spRaw / spPass)) : 0;
+      } else if (spRaw <= spStd) {
+        // 第二段：及格至標準滿分 (60 ~ 100 分連續線性過渡)
+        const ratio = (spStd > spPass) ? (spRaw - spPass) / (spStd - spPass) : 1.0;
+        spacePercentScore = 60 + 40 * ratio;
       } else {
-        ratio = 1.0;
+        // 第三段：頂規加分突破 (100 ~ 120 分)
+        const extraRatio = (spHigh > spStd) ? (spRaw - spStd) / (spHigh - spStd) : 0;
+        spacePercentScore = 100 + 20 * extraRatio;
       }
     }
 
     if (isBonus) {
       const maxBonus = getBonusMaxScore(sp.id);
-      totalBonusScore += (Math.min(1.0, ratio) * maxBonus);
+      // 特殊加分空間依其表現貢獻外加分數
+      totalBonusScore += (Math.min(1.2, spacePercentScore / 100) * maxBonus);
     } else {
       const weight = currentWeights[sp.id] || 0;
-      let spaceFinalScore = 0;
-
-      if (sp.enabled && sp.userActive !== false && !hasNotOk) {
-        if (spStd > 0) {
-          if (spRaw <= spStd) {
-            spaceFinalScore = weight * (spRaw / spStd);
-          } else {
-            const extraRatio = (spHigh > spStd) ? (spRaw - spStd) / (spHigh - spStd) : 0;
-            spaceFinalScore = weight * (1.0 + 0.2 * extraRatio);
-          }
-        } else {
-          spaceFinalScore = weight;
-        }
-      }
-      totalBaseScore += spaceFinalScore;
+      totalBaseScore += weight * (spacePercentScore / 100);
     }
 
+    // 更新各卡片數據 (低標欄位顯示精確 60 分及格基準點)
     const elLow = document.getElementById(`low_${sp.id}`);
     const elStd = document.getElementById(`std_${sp.id}`);
     const elHigh = document.getElementById(`high_${sp.id}`);
     const elRaw = document.getElementById(`raw_${sp.id}`);
-    if (elLow) elLow.innerText = spLow.toFixed(1);
+    if (elLow) elLow.innerText = spPass.toFixed(1);
     if (elStd) elStd.innerText = spStd.toFixed(1);
     if (elHigh) elHigh.innerText = spHigh.toFixed(1);
     if (elRaw) elRaw.innerText = (sp.enabled && sp.userActive !== false ? spRaw : 0).toFixed(1);
@@ -545,6 +547,8 @@ function calculateAll() {
   const finalEl = document.getElementById("dispFinal");
   if (finalEl) {
     finalEl.innerText = finalScore.toFixed(1);
+    
+    // >= 59.5 均認定為及格合格顏色
     finalEl.style.color = finalScore > 100 
       ? "#b45309" 
       : finalScore >= 80 
@@ -556,10 +560,6 @@ function calculateAll() {
 
   updateRadarChart();
 }
-
-// ==========================================
-// 房型設定、套房配置與極端值套用
-// ==========================================
 
 function setPreset(roomNum, shouldAllocate = true) {
   const selEl = document.getElementById("selBedrooms");
@@ -602,7 +602,16 @@ function togglePlusOne(checked) {
   updateSpecTitle();
 }
 
+/**
+ * 一鍵套用分數預設功能：
+ * max: 選取最高分選項 (包含 >1.0 的豪宅頂規加分)
+ * standard: 選取 = 1.0 的選項 (標準配備，必備總分精準達 100.0 滿分)
+ * pass: 精確套用 12 空間定義之及格選項 (必備總分精準達 60.0 及格分)
+ * min: 選取除了 not ok 之外的最低數值選項 (排除致命硬傷後的絕對最低配置)
+ * @param {'max'|'standard'|'pass'|'min'} mode
+ */
 function applyExtremePreset(mode) {
+  // 1. 還原所有空間的有效啟用狀態
   spaces.forEach(sp => {
     sp.userActive = true;
     const chk = document.getElementById(`toggle_${sp.id}`);
@@ -614,24 +623,33 @@ function applyExtremePreset(mode) {
     }
   });
 
+  // 2. 針對目前已啟用且可見之空間切換選項
   spaces.forEach((sp, spIdx) => {
     if (!sp.enabled || sp.userActive === false) return;
 
     sp.criteria.forEach((crit, critIdx) => {
+      // 關鍵過濾：排除 "not ok"，僅保留純數值選項 (0, 0.2, 0.4, 0.6, 1.0, 1.2 等)
       const validOpts = crit.opts.map((opt, idx) => ({ ...opt, origIdx: idx }))
                                  .filter(opt => typeof opt.v === 'number');
       if (!validOpts.length) return;
 
       let targetOpt;
       if (mode === 'max') {
+        // ★ 最高標分：挑選數值最大者 (包含 >1.0 加分)
         targetOpt = validOpts.reduce((prev, curr) => (curr.v > prev.v ? curr : prev));
       } else if (mode === 'standard') {
+        // ✔ 標準滿分：選取 1.0 標準配置
         targetOpt = validOpts.find(o => o.v === 1.0);
         if (!targetOpt) {
           const defaultOrigIdx = defaultSpacesData[spIdx]?.criteria[critIdx]?.d ?? 0;
           targetOpt = validOpts.find(o => o.origIdx === defaultOrigIdx) || validOpts[0];
         }
+      } else if (mode === 'pass') {
+        // ● 及格分：精確套用各空間定義之 60 分基準選項
+        const pIdx = SPACE_PASS_INDICES[sp.id]?.[critIdx] ?? 0;
+        targetOpt = validOpts.find(o => o.origIdx === pIdx) || validOpts[0];
       } else {
+        // ▲ 最低分：挑選數值最小者 (已自動排除 not ok，允許選到 0 或 0.2/0.4/0.6 等低分)
         targetOpt = validOpts.reduce((prev, curr) => (curr.v < prev.v ? curr : prev));
       }
 
@@ -690,10 +708,6 @@ function resetToDefault() {
   setPreset('2');
 }
 
-// ==========================================
-// 圖表、標題與報表匯出
-// ==========================================
-
 function getFormattedRoomSpec() {
   const { roomType, hasPlusOne, suiteCount } = getCurrentLayoutState();
   return `${roomType}${hasPlusOne ? "+1" : ""}房/${suiteCount}套房`;
@@ -733,7 +747,7 @@ function updateRadarChart() {
   const dataValues = chartSpaces.map(sp => {
     if (sp.userActive === false) return 0;
 
-    const low = parseFloat(document.getElementById(`low_${sp.id}`)?.innerText || 0);
+    const pass = parseFloat(document.getElementById(`low_${sp.id}`)?.innerText || 1);
     const std = parseFloat(document.getElementById(`std_${sp.id}`)?.innerText || 1);
     const high = parseFloat(document.getElementById(`high_${sp.id}`)?.innerText || 1);
     const raw = parseFloat(document.getElementById(`raw_${sp.id}`)?.innerText || 0);
@@ -742,13 +756,16 @@ function updateRadarChart() {
     const isBonus = isBonusSpace(sp.id, roomType, hasPlusOne);
 
     if (isBonus) {
-      if (high <= low) return 100;
-      const bonusRate = Math.max(0, Math.min(1, (raw - low) / (high - low)));
-      return Math.round(100 + bonusRate * 40);
-    } else {
       if (std <= 0) return 100;
-      if (raw <= std) {
-        return Math.round((raw / std) * 100);
+      const bonusRate = Math.max(0, Math.min(1.2, raw / std));
+      return Math.round(bonusRate * 100);
+    } else {
+      // 雷達圖繪製數值與百分制分數完全對齊
+      if (raw < pass) {
+        return Math.round(pass > 0 ? (60 * (raw / pass)) : 0);
+      } else if (raw <= std) {
+        const ratio = (std > pass) ? (raw - pass) / (std - pass) : 1.0;
+        return Math.round(60 + 40 * ratio);
       } else {
         const extraRatio = (high > std) ? (raw - std) / (high - std) : 0;
         return Math.round(100 + 20 * extraRatio);
@@ -905,10 +922,6 @@ function exportReportPDF() {
   window.print();
 }
 
-// ==========================================
-// 檔案處理與 JSON 匯入/匯出
-// ==========================================
-
 function onFloorPlanUpload(input) {
   if (input.files?.[0]) {
     const reader = new FileReader();
@@ -978,7 +991,6 @@ function confirmImportFromAI() {
       if (chk) chk.checked = !!data.hasBonusZhongDao;
     }
 
-    // 連動修復 2：還原 1 房獨立玄關勾選狀態
     if (data.hasBonusXuanGuan !== undefined) {
       const chk = document.getElementById("chkBonusXuanGuan");
       if (chk) chk.checked = !!data.hasBonusXuanGuan;
@@ -1033,7 +1045,6 @@ function confirmImportFromAI() {
       if (selSuite) selSuite.value = data.suiteCount;
     }
 
-    // 連動修復 3：匯入後全面檢查衛浴兩件式並鎖定三角配置
     spaces.forEach(sp => syncTriangleState(sp));
 
     updateLayoutConfig();
@@ -1061,7 +1072,7 @@ function exportCurrentJSON() {
       hasPlusOne: hasPlusOne,
       suiteCount: suiteCount,
       hasBonusZhongDao: chkBonusZD ? chkBonusZD.checked : false,
-      hasBonusXuanGuan: chkBonusXG ? chkBonusXG.checked : false, // 連動修復 2：打包獨立玄關狀態
+      hasBonusXuanGuan: chkBonusXG ? chkBonusXG.checked : false,
       disabledSpaces: spaces.filter(sp => sp.userActive === false).map(sp => sp.id),
       conclusion: getIptVal("iptConclusion"),
       selections: selections
@@ -1089,10 +1100,6 @@ function exportCurrentJSON() {
     alert("匯出檔案發生錯誤：" + err.message);
   }
 }
-
-// ==========================================
-// 全域掛載
-// ==========================================
 
 window.triggerReupload = triggerReupload;
 window.removeFloorPlan = removeFloorPlan;
