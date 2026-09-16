@@ -4,7 +4,7 @@
 
 let radarChartInstance = null;
 
-// 各房型必備空間固定權重配置表 (加總嚴格鎖定為 100 分)
+// 各房型必備空間固定權重配置表 (加總嚴格鎖定為 100 分)[cite: 1]
 const SPACE_WEIGHTS = {
   1: { ke_ting: 22, can_ting: 6, chu_fang: 12, yang_tai: 16, zhu_wo: 24, ke_yu: 20 },
   2: { xuan_guan: 7, ke_ting: 14, can_ting: 11, chu_fang: 11, yang_tai: 11, zhu_wo: 16, ke_yu: 15, ci_wo_1: 15 },
@@ -12,24 +12,24 @@ const SPACE_WEIGHTS = {
   4: { xuan_guan: 5, ke_ting: 16, can_ting: 10, chu_fang: 10, yang_tai: 10, zhu_wo: 12, zhu_wo_bath: 12, ke_yu: 10, ci_wo_1: 7, ci_wo_2: 7, ci_wo_3: 7 }
 };
 
-// 各空間專屬標準 60 分及格選項索引對應表 (基準截圖參照)
+// 各空間專屬標準 60 分及格選項索引對應表 (基準截圖參照)[cite: 1]
 const SPACE_PASS_INDICES = {
-  xuan_guan: [1, 1, 0],              // 實得 1.2
-  ke_ting: [1, 0, 2, 0],             // 預設 1 房基準：實得 1.8 (客廳深度動態由 getSpacePassIndices 依房型指派)
-  can_ting: [0, 1, 1],               // 實得 1.6
-  chu_fang: [1, 0, 1, 0, 0, 0],      // 實得 2.2
-  yang_tai: [0, 1, 0, 0, 1],         // 實得 1.4
-  zhu_wo: [2, 0, 2, 2, 5, 1, 1, 1, 2], // 實得 8.0
-  ci_wo_1: [1, 0, 2, 2, 3, 1, 1, 1, 1], // 實得 7.4
-  ci_wo_2: [1, 0, 2, 2, 3, 1, 1, 1, 1],
-  ci_wo_3: [1, 0, 2, 2, 3, 1, 1, 1, 1],
-  zhu_wo_bath: [0, 1, 1, 1, 2, 0, 0, 0], // 實得 2.8
-  ci_wo_1_bath: [0, 1, 1, 1, 2, 0, 0, 0],
-  ci_wo_2_bath: [0, 1, 1, 1, 2, 0, 0, 0],
-  ci_wo_3_bath: [0, 1, 1, 1, 2, 0, 0, 0],
-  ke_yu: [0, 1, 1, 1, 2, 0, 1, 1],   // 實得 4.8
-  zhong_dao: [3, 3, 2, 1, 1, 0],     // 實得 5.0
-  plus_one: [0, 1, 1, 1]             // 實得 3.0
+  xuan_guan: [1, 1, 0],              // 實得 1.2[cite: 1]
+  ke_ting: [1, 0, 2, 0],             // 預設 1 房基準：實得 1.8 (客廳深度動態由 getSpacePassIndices 依房型指派)[cite: 1]
+  can_ting: [0, 1, 1],               // 實得 1.6[cite: 1]
+  chu_fang: [1, 0, 1, 0, 0, 0],      // 實得 2.2[cite: 1]
+  yang_tai: [0, 1, 0, 0, 1],         // 實得 1.4[cite: 1]
+  zhu_wo: [2, 0, 2, 2, 5, 1, 1, 1, 2], // 實得 8.0[cite: 1]
+  ci_wo_1: [1, 0, 2, 2, 3, 1, 1, 1, 1], // 實得 7.4[cite: 1]
+  ci_wo_2: [1, 0, 2, 2, 3, 1, 1, 1, 1],[cite: 1]
+  ci_wo_3: [1, 0, 2, 2, 3, 1, 1, 1, 1],[cite: 1]
+  zhu_wo_bath: [0, 1, 1, 1, 2, 0, 0, 0], // 實得 2.8[cite: 1]
+  ci_wo_1_bath: [0, 1, 1, 1, 2, 0, 0, 0],[cite: 1]
+  ci_wo_2_bath: [0, 1, 1, 1, 2, 0, 0, 0],[cite: 1]
+  ci_wo_3_bath: [0, 1, 1, 1, 2, 0, 0, 0],[cite: 1]
+  ke_yu: [0, 1, 1, 1, 2, 0, 1, 1],   // 實得 4.8[cite: 1]
+  zhong_dao: [3, 3, 2, 1, 1, 0],     // 實得 5.0[cite: 1]
+  plus_one: [0, 1, 1, 1]             // 實得 3.0[cite: 1]
 };
 
 /**
@@ -79,7 +79,7 @@ function createSecondaryBedroomCriteria() {
         { l: ">180cm", v: 1.2 },
         { l: ">210cm", v: 1.4 }
       ], 
-      d: 3 
+      d: 3
     },
     { name: "衣櫃深度", opts: [{ l: "<60cm", v: "not ok" }, { l: "≥60cm", v: 1.0 }, { l: ">65cm", v: 1.2 }], d: 1 },
     { name: "衣櫃前淨寬", opts: [{ l: "<60cm", v: 0 }, { l: "≥60cm", v: 1.0 }, { l: ">70cm", v: 1.2 }, { l: ">80cm", v: 1.4 }, { l: ">90cm", v: 1.6 }], d: 1 },
@@ -113,9 +113,10 @@ let spaces = [
           { l: ">3m", v: 1.0 },
           { l: ">3.2m", v: 1.2 },
           { l: ">3.4m", v: 1.4 },
-          { l: ">3.6m", v: 1.6 }
+          { l: ">3.6m", v: 1.6 },
+          { l: ">4m", v: 1.8 }
         ], 
-        d: 4 
+        d: 4
       },
       { name: "沙發座數", opts: [{ l: "<居住人數", v: 0.6 }, { l: "符合居住人數", v: 1.0 }], d: 1 }
     ]
@@ -152,7 +153,7 @@ let spaces = [
           { l: ">150cm", v: 1.2 },
           { l: ">180cm", v: 1.4 }
         ], 
-        d: 3 
+        d: 3
       },
       { 
         name: "檯面深度", 
@@ -164,7 +165,7 @@ let spaces = [
           { l: ">90cm", v: 1.2 },
           { l: ">120cm", v: 1.4 }
         ], 
-        d: 3 
+        d: 3
       },
       { 
         name: "環狀走道淨寬", 
@@ -174,7 +175,7 @@ let spaces = [
           { l: ">80cm", v: 1.0 },
           { l: ">90cm", v: 1.2 }
         ], 
-        d: 2 
+        d: 2
       },
       { name: "設置水槽", opts: [{ l: "無設置", v: 0 }, { l: "有設置", v: 1.0 }], d: 0 },
       { name: "設置IH爐", opts: [{ l: "無設置", v: 0 }, { l: "有設置", v: 1.0 }], d: 0 },
@@ -198,7 +199,7 @@ let spaces = [
           { l: ">1.2坪", v: 1.0 },
           { l: ">1.4坪", v: 1.2 }
         ], 
-        d: 4 
+        d: 4
       }
     ]
   },
@@ -221,7 +222,7 @@ let spaces = [
           { l: ">245cm", v: 1.2 },
           { l: ">300cm", v: 1.4 }
         ], 
-        d: 5 
+        d: 5
       },
       { name: "衣櫃深度", opts: [{ l: "<60cm", v: "not ok" }, { l: "≥60cm", v: 1.0 }, { l: ">65cm", v: 1.2 }], d: 1 },
       { name: "衣櫃前淨寬", opts: [{ l: "<60cm", v: 0 }, { l: "≥60cm", v: 1.0 }, { l: ">70cm", v: 1.2 }, { l: ">80cm", v: 1.4 }, { l: ">90cm", v: 1.6 }], d: 1 },
@@ -663,7 +664,7 @@ function togglePlusOne(checked) {
 
 /**
  * 一鍵套用分數預設功能：
- * max: 選取最高分選項 (包含 >1.0 的豪宅頂規加分)
+ * max: 選取最高分選項 (包含 >1.0 的豪宅頂規加分，客廳深度選到 >4m 1.8)
  * standard: 選取標準滿分配置 (客廳深度隨 1~4 房動態適配 3.0m / 3.2m / 3.4m / 3.6m)
  * pass: 精確套用及格配置 (客廳深度隨 1~4 房動態適配 2.8m / 3.0m / 3.2m / 3.4m)
  * min: 選取除了 not ok 之外的最低數值選項
@@ -695,7 +696,6 @@ function applyExtremePreset(mode) {
       if (mode === 'max') {
         targetOpt = validOpts.reduce((prev, curr) => (curr.v > prev.v ? curr : prev));
       } else if (mode === 'standard') {
-        // 客廳深度滿分標準隨房型尺度動態切換
         if (sp.id === "ke_ting" && crit.name === "客廳深度") {
           const depthStdIdxMap = { 1: 4, 2: 5, 3: 6, 4: 7 };
           const targetIdx = depthStdIdxMap[roomType] ?? 5;
