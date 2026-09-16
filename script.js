@@ -19,7 +19,7 @@ const bathCriteriaTemplate = [
   { name: "洗臉檯面寬度", opts: [{ l: "<60cm", v: "not ok" }, { l: "≥60cm", v: 0.6 }, { l: ">70cm", v: 1.0 }, { l: ">80cm", v: 1.2 }], d: 1 },
   { name: "馬桶空間寬度", opts: [{ l: "<74cm", v: "not ok" }, { l: "≥74cm", v: 0.6 }, { l: ">80cm", v: 1.0 }], d: 1 },
   { name: "淋浴間尺寸", opts: [{ l: "未設置", v: 0 }, { l: "<80x80cm", v: "not ok" }, { l: "≥80x80cm", v: 0.6 }, { l: ">90x90cm", v: 1.0 }, { l: ">1x1m", v: 1.2 }], d: 2 },
-  { name: "浴缸尺寸", opts: [{ l: "未設置", v: 0 }, { l: "<145cm", v: 0.6 }, { l: ">145cm", v: 1.0 }], d: 0 },
+  { name: "浴缸尺寸", opts: [{ l: "未設置", v: 0 }, { l: "<145cm", v: 0.6 }, { l: "≥145cm", v: 1.0 }], d: 0 },
   { name: "乾溼分離", opts: [{ l: "無", v: 0 }, { l: "有", v: 1.0 }], d: 1 },
   { name: "三角配置", opts: [{ l: "是", v: 0 }, { l: "否", v: 1.0 }], d: 1 }
 ];
@@ -46,8 +46,8 @@ let spaces = [
   {
     id: "xuan_guan", name: "玄關", enabled: true,
     criteria: [
-      { name: "走道淨寬", opts: [{ l: "<90cm", v: "not ok" }, { l: ">90cm", v: 0.6 }, { l: ">100cm", v: 1.0 }, { l: ">120cm", v: 1.2 }], d: 1 },
-      { name: "鞋櫃長度", opts: [{ l: "未設置", v: "not ok" }, { l: "<60cm", v: 0.6 }, { l: ">60cm", v: 1.0 }, { l: ">90cm", v: 1.2 }, { l: ">120cm", v: 1.4 }], d: 2 },
+      { name: "走道淨寬", opts: [{ l: "<90cm", v: "not ok" }, { l: "≥90cm", v: 0.6 }, { l: ">100cm", v: 1.0 }, { l: ">120cm", v: 1.2 }], d: 1 },
+      { name: "鞋櫃長度", opts: [{ l: "未設置", v: "not ok" }, { l: "<60cm", v: 0.6 }, { l: "≥60cm", v: 1.0 }, { l: ">90cm", v: 1.2 }, { l: ">120cm", v: 1.4 }], d: 2 },
       { name: "衣帽間", opts: [{ l: "未設置", v: 0 }, { l: "一般衣帽間", v: 1.0 }, { l: "電子衣櫃專用", v: 1.2 }], d: 0 }
     ]
   },
@@ -56,7 +56,7 @@ let spaces = [
     criteria: [
       { name: "空間採光", opts: [{ l: "無採光", v: "not ok" }, { l: "間接採光", v: 0.6 }, { l: "直接採光", v: 1.0 }], d: 2 },
       { name: "連接陽台", opts: [{ l: "無連接", v: 0 }, { l: "有連接", v: 1.0 }], d: 0 },
-      { name: "客廳深度", opts: [{ l: "<2.8m", v: "not ok" }, { l: "<3m", v: 0.6 }, { l: ">3m", v: 1.0 }, { l: ">3.2m", v: 1.2 }, { l: ">3.6m", v: 1.4 }], d: 2 },
+      { name: "客廳深度", opts: [{ l: "<2.8m", v: "not ok" }, { l: "<3m", v: 0.6 }, { l: "≥3m", v: 1.0 }, { l: ">3.2m", v: 1.2 }, { l: ">3.6m", v: 1.4 }], d: 2 },
       { name: "沙發座數", opts: [{ l: "座位<居住人數", v: 0.6 }, { l: "符合居住人數", v: 1.0 }], d: 1 }
     ]
   },
@@ -65,16 +65,16 @@ let spaces = [
     criteria: [
       { name: "空間採光", opts: [{ l: "無採光", v: 0 }, { l: "間接採光", v: 1.0 }, { l: "直接採光", v: 1.2 }], d: 1 },
       { name: "餐桌座位數", opts: [{ l: "不符合人數", v: "not ok" }, { l: "符合居住人數", v: 1.0 }], d: 1 },
-      { name: "座椅移動空間", opts: [{ l: "<70cm", v: "not ok" }, { l: ">70cm", v: 0.6 }, { l: ">75cm", v: 0.8 }, { l: ">80cm", v: 1.0 }, { l: ">90cm", v: 1.2 }], d: 3 }
+      { name: "座椅移動空間", opts: [{ l: "<70cm", v: "not ok" }, { l: "≥70cm", v: 0.6 }, { l: ">75cm", v: 0.8 }, { l: ">80cm", v: 1.0 }, { l: ">90cm", v: 1.2 }], d: 3 }
     ]
   },
   {
     id: "chu_fang", name: "廚房", enabled: true,
     criteria: [
-      { name: "檯面深度", opts: [{ l: "<60cm", v: 0 }, { l: ">60cm", v: 1.0 }], d: 1 },
-      { name: "料理台寬度", opts: [{ l: "<60cm", v: 0 }, { l: ">60cm", v: 0.6 }, { l: ">70cm", v: 0.8 }, { l: ">80cm", v: 1.0 }], d: 3 },
-      { name: "走道淨寬", opts: [{ l: "<70cm", v: "not ok" }, { l: ">70cm", v: 0.6 }, { l: ">80cm", v: 1.0 }, { l: ">90cm", v: 1.2 }], d: 2 },
-      { name: "排油煙路徑", opts: [{ l: ">5m", v: 0.6 }, { l: "<5m", v: 0.8 }, { l: "<1m", v: 1.0 }], d: 2 },
+      { name: "檯面深度", opts: [{ l: "<60cm", v: 0 }, { l: "≥60cm", v: 1.0 }], d: 1 },
+      { name: "料理台寬度", opts: [{ l: "<60cm", v: 0 }, { l: "≥60cm", v: 0.6 }, { l: ">70cm", v: 0.8 }, { l: ">80cm", v: 1.0 }], d: 3 },
+      { name: "走道淨寬", opts: [{ l: "<70cm", v: "not ok" }, { l: "≥70cm", v: 0.6 }, { l: ">80cm", v: 1.0 }, { l: ">90cm", v: 1.2 }], d: 2 },
+      { name: "排油煙路徑", opts: [{ l: ">5m", v: 0.6 }, { l: "≤5m", v: 0.8 }, { l: "<1m", v: 1.0 }], d: 2 },
       { name: "留設電器櫃位置", opts: [{ l: "無電器櫃", v: 0 }, { l: "有", v: 1.0 }], d: 1 },
       { name: "是否連接工作陽台", opts: [{ l: "無連接", v: 0 }, { l: "有連接", v: 1.0 }], d: 0 }
     ]
@@ -102,7 +102,7 @@ let spaces = [
         name: "坪數大小", 
         opts: [
           { l: "<0.7坪", v: "not ok" },
-          { l: ">0.7坪", v: 0.4 },
+          { l: "≥0.7坪", v: 0.4 },
           { l: ">0.8坪", v: 0.6 },
           { l: ">1坪", v: 0.8 },
           { l: ">1.2坪", v: 1.0 },
@@ -118,10 +118,10 @@ let spaces = [
       { name: "空間採光", opts: [{ l: "無採光", v: "not ok" }, { l: "間接採光", v: 0.6 }, { l: "直接採光", v: 1.0 }], d: 2 },
       { name: "連接陽台", opts: [{ l: "無連接", v: 0 }, { l: "有連接", v: 1.0 }], d: 0 },
       { name: "床邊留設走道數", opts: [{ l: "<三邊", v: "not ok" }, { l: "三邊", v: 1.0 }], d: 1 },
-      { name: "床邊走道淨寬", opts: [{ l: "<50cm", v: 0 }, { l: ">50cm", v: 0.6 }, { l: ">60cm", v: 1.0 }, { l: ">70cm", v: 1.2 }, { l: ">80cm", v: 1.4 }, { l: ">90cm", v: 1.6 }], d: 2 },
-      { name: "衣櫃長度", opts: [{ l: "<150cm", v: 0 }, { l: ">150cm", v: 0.6 }, { l: ">180cm", v: 0.8 }, { l: ">200cm", v: 1.0 }, { l: ">250cm", v: 1.2 }, { l: ">300cm", v: 1.6 }], d: 3 },
-      { name: "衣櫃深度", opts: [{ l: "<60cm", v: "not ok" }, { l: ">60cm", v: 1.0 }, { l: ">65cm", v: 1.2 }], d: 1 },
-      { name: "衣櫃前淨空間", opts: [{ l: "<60cm", v: 0 }, { l: ">60cm", v: 1.0 }, { l: ">70cm", v: 1.2 }, { l: ">80cm", v: 1.4 }, { l: ">90cm", v: 1.6 }], d: 1 },
+      { name: "床邊走道淨寬", opts: [{ l: "<50cm", v: 0 }, { l: "≥50cm", v: 0.6 }, { l: ">60cm", v: 1.0 }, { l: ">70cm", v: 1.2 }, { l: ">80cm", v: 1.4 }, { l: ">90cm", v: 1.6 }], d: 2 },
+      { name: "衣櫃長度", opts: [{ l: "<150cm", v: 0 }, { l: "≥150cm", v: 0.6 }, { l: ">180cm", v: 0.8 }, { l: ">200cm", v: 1.0 }, { l: ">250cm", v: 1.2 }, { l: ">300cm", v: 1.6 }], d: 3 },
+      { name: "衣櫃深度", opts: [{ l: "<60cm", v: "not ok" }, { l: "≥60cm", v: 1.0 }, { l: ">65cm", v: 1.2 }], d: 1 },
+      { name: "衣櫃前淨空間", opts: [{ l: "<60cm", v: 0 }, { l: "≥60cm", v: 1.0 }, { l: ">70cm", v: 1.2 }, { l: ">80cm", v: 1.4 }, { l: ">90cm", v: 1.6 }], d: 1 },
       { name: "是否留設梳妝台", opts: [{ l: "無", v: 0 }, { l: "有", v: 1.0 }], d: 1 },
       { name: "床具尺寸", opts: [{ l: "<5x6.2尺", v: 0 }, { l: "≥5x6.2尺", v: 0.6 }, { l: ">6x6.2尺", v: 1 }, { l: ">6x7尺", v: 1.2 }], d: 1 }
     ]
@@ -138,7 +138,7 @@ let spaces = [
     id: "plus_one", name: "+1 房", enabled: false,
     criteria: [
       { name: "開窗", opts: [{ l: "無開窗", v: 0 }, { l: "有開窗", v: 1.0 }], d: 1 },
-      { name: "淨寬", opts: [{ l: "小於2m", v: 0.5 }, { l: "大於2m", v: 1.0 }], d: 0 },
+      { name: "淨寬", opts: [{ l: "<2m", v: "not ok" }, { l: "≥2m", v: 1.0 }], d: 0 },
       { name: "可否配置床具", opts: [{ l: "無配置", v: 0 }, { l: "單人床", v: 1.0 }, { l: "加大單人床", v: 1.2 }], d: 1 },
       { name: "是否設置衣櫃", opts: [{ l: "無配置", v: 0 }, { l: "有配置", v: 1.0 }], d: 1 }
     ]
@@ -235,6 +235,7 @@ function renderSpaces() {
         </div>
         <div class="space-scores">
           <span>低標: <b id="low_${sp.id}">0.0</b></span>
+          <span>滿分: <b id="std_${sp.id}" style="color:#0369a1">0.0</b></span>
           <span>高標: <b id="high_${sp.id}">0.0</b></span>
           <span>實得: <b id="raw_${sp.id}" style="color:var(--primary)">0.0</b></span>
         </div>
@@ -376,17 +377,24 @@ function calculateAll() {
   let totalLowSum = 0.0;   
   let totalHighSum = 0.0;  
 
-  spaces.forEach((sp) => {
-    let spLow = 0, spHigh = 0, spRaw = 0;
+  spaces.forEach((sp, spIdx) => {
+    let spLow = 0, spStd = 0, spHigh = 0, spRaw = 0;
     let hasNotOk = false;
     const isBonus = isBonusSpace(sp.id, roomType, hasPlusOne);
 
-    sp.criteria.forEach((crit) => {
+    sp.criteria.forEach((crit, critIdx) => {
       const validScores = crit.opts.filter(o => typeof o.v === 'number').map(o => o.v);
       const minVal = validScores.length ? Math.min(...validScores) : 0;
       const maxVal = validScores.length ? Math.max(...validScores) : 0;
 
+      // 滿分基準分：優先取 1.0；若無 1.0 (如純加分項) 則取預設標準配置分
+      const hasOne = crit.opts.some(o => o.v === 1.0);
+      const defaultIdx = defaultSpacesData[spIdx]?.criteria[critIdx]?.d ?? 0;
+      const defaultVal = typeof crit.opts[defaultIdx]?.v === 'number' ? crit.opts[defaultIdx].v : 0;
+      const stdVal = hasOne ? 1.0 : defaultVal;
+
       spLow += minVal;
+      spStd += stdVal;
       spHigh += maxVal;
 
       if (sp.enabled && sp.userActive !== false) {
@@ -411,11 +419,11 @@ function calculateAll() {
       rawSum += spRaw;
     }
 
-    // 內部得分率 (0.0 ~ 1.0)
+    // 內部得分率：以滿分標準 spStd 為分母折算
     let ratio = 0.0;
     if (sp.enabled && sp.userActive !== false && spRaw > 0) {
       if (spHigh > spLow) {
-        ratio = Math.max(0, Math.min(1, (spRaw - spLow) / (spHigh - spLow)));
+        ratio = Math.max(0, (spRaw - spLow) / (spHigh - spLow));
       } else {
         ratio = 1.0;
       }
@@ -423,22 +431,25 @@ function calculateAll() {
 
     if (isBonus) {
       const maxBonus = getBonusMaxScore(sp.id);
-      totalBonusScore += (ratio * maxBonus);
+      totalBonusScore += (Math.min(1.0, ratio) * maxBonus);
     } else {
       const weight = currentWeights[sp.id] || 0;
       let spaceFinalScore = 0;
 
       if (sp.enabled && sp.userActive !== false && !hasNotOk) {
-        // 全選最低標得權重之 60%，全選最高標得 100%
-        spaceFinalScore = weight * (0.6 + 0.4 * ratio);
+        // 低標拿權重之 60%，達到滿分標準時拿滿 100% 權重，頂規加分時向上突破
+        spaceFinalScore = weight * (0.6 + 0.4 * (spStd > spLow ? (spRaw - spLow) / (spStd - spLow) : 1.0));
       }
       totalBaseScore += spaceFinalScore;
     }
 
+    // 更新卡片右上角四個數據
     const elLow = document.getElementById(`low_${sp.id}`);
+    const elStd = document.getElementById(`std_${sp.id}`);
     const elHigh = document.getElementById(`high_${sp.id}`);
     const elRaw = document.getElementById(`raw_${sp.id}`);
     if (elLow) elLow.innerText = spLow.toFixed(1);
+    if (elStd) elStd.innerText = spStd.toFixed(1);
     if (elHigh) elHigh.innerText = spHigh.toFixed(1);
     if (elRaw) elRaw.innerText = (sp.enabled && sp.userActive !== false ? spRaw : 0).toFixed(1);
   });
