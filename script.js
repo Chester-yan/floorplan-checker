@@ -6,10 +6,10 @@ let radarChartInstance = null;
 
 // 各房型必備空間固定權重配置表 (加總均嚴格鎖定為 100 分)
 const SPACE_WEIGHTS = {
-  1: { ke_ting: 20, can_ting: 12, chu_fang: 16, yang_tai: 12, zhu_wo: 22, ke_yu: 18 }, // 20+12+16+12+22+18 = 100
-  2: { xuan_guan: 8, ke_ting: 15, can_ting: 11, chu_fang: 13, yang_tai: 9, zhu_wo: 16, ke_yu: 15, ci_wo_1: 13 },     // 8+15+11+13+9+16+15+13 = 100
-  3: { xuan_guan: 6, ke_ting: 13, can_ting: 10, chu_fang: 10, yang_tai: 8, zhu_wo: 13, zhu_wo_bath: 10, ke_yu: 11, ci_wo_1: 9, ci_wo_2: 10 }, // 6+13+10+10+8+13+10+11+9+10 = 100
-  4: { xuan_guan: 6, ke_ting: 12, can_ting: 10, chu_fang: 10, yang_tai: 7, zhu_wo: 12, zhu_wo_bath: 10, ke_yu: 10, ci_wo_1: 8, ci_wo_2: 8, ci_wo_3: 7 }  // 6+12+10+10+7+12+10+10+8+8+7 = 100
+  1: { ke_ting: 20, can_ting: 12, chu_fang: 16, yang_tai: 12, zhu_wo: 22, ke_yu: 18 },
+  2: { xuan_guan: 8, ke_ting: 15, can_ting: 11, chu_fang: 13, yang_tai: 9, zhu_wo: 16, ke_yu: 15, ci_wo_1: 13 },
+  3: { xuan_guan: 6, ke_ting: 13, can_ting: 10, chu_fang: 10, yang_tai: 8, zhu_wo: 13, zhu_wo_bath: 10, ke_yu: 11, ci_wo_1: 9, ci_wo_2: 10 },
+  4: { xuan_guan: 6, ke_ting: 12, can_ting: 10, chu_fang: 10, yang_tai: 7, zhu_wo: 12, zhu_wo_bath: 10, ke_yu: 10, ci_wo_1: 8, ci_wo_2: 8, ci_wo_3: 7 }
 };
 
 // 通用浴室選項範本 (8項指標)
@@ -25,7 +25,7 @@ const bathCriteriaTemplate = [
 ];
 
 /**
- * 次臥房選項範本生成器 (已移除「是否為套房」以防選單衝突)
+ * 次臥房選項範本生成器
  */
 function createSecondaryBedroomCriteria() {
   return [
@@ -33,11 +33,22 @@ function createSecondaryBedroomCriteria() {
     { name: "連接陽台", opts: [{ l: "無連接", v: 0 }, { l: "有連接", v: 1.0 }], d: 0 },
     { name: "床邊走道數", opts: [{ l: "<一邊", v: "not ok" }, { l: "一邊", v: 0.6 }, { l: "兩邊", v: 0.8 }, { l: "三邊", v: 1.0 }], d: 2 },
     { name: "床邊走道淨寬", opts: [{ l: "<50cm", v: 0 }, { l: "≥50cm", v: 0.6 }, { l: ">60cm", v: 1.0 }, { l: ">70cm", v: 1.2 }, { l: ">80cm", v: 1.4 }, { l: ">90cm", v: 1.6 }], d: 2 },
-    { name: "衣櫃長度", opts: [{ l: "<120cm", v: 0 }, { l: "≥120cm", v: 0.6 }, { l: ">140cm", v: 0.8 }, { l: ">160cm", v: 1.0 }, { l: ">180cm", v: 1.2 }, { l: ">200cm", v: 1.4 }], d: 1 },
+    { 
+      name: "衣櫃長度", 
+      opts: [
+        { l: "<105cm", v: "not ok" },
+        { l: "≥105cm", v: 0.6 },
+        { l: ">120cm", v: 0.8 },
+        { l: ">150cm", v: 1.0 },
+        { l: ">180cm", v: 1.2 },
+        { l: ">210cm", v: 1.4 }
+      ], 
+      d: 3 
+    },
     { name: "衣櫃深度", opts: [{ l: "<60cm", v: "not ok" }, { l: "≥60cm", v: 1.0 }, { l: ">65cm", v: 1.2 }], d: 1 },
-    { name: "衣櫃前淨空間", opts: [{ l: "<60cm", v: 0 }, { l: "≥60cm", v: 1.0 }, { l: ">70cm", v: 1.2 }, { l: ">80cm", v: 1.4 }, { l: ">90cm", v: 1.6 }], d: 1 },
+    { name: "衣櫃前淨寬", opts: [{ l: "<60cm", v: 0 }, { l: "≥60cm", v: 1.0 }, { l: ">70cm", v: 1.2 }, { l: ">80cm", v: 1.4 }, { l: ">90cm", v: 1.6 }], d: 1 },
     { name: "是否留設梳妝台", opts: [{ l: "無", v: 0 }, { l: "有", v: 1.0 }], d: 1 },
-    { name: "床具尺寸", opts: [{ l: "<5x6.2尺", v: 0 }, { l: "≥5x6.2尺", v: 1 }, { l: ">6x6.2尺", v: 1.2 }], d: 1 }
+    { name: "床具尺寸", opts: [{ l: "<5x6.2尺", v: 0 }, { l: "≥5x6.2尺", v: 1.0 }, { l: ">6x6.2尺", v: 1.2 }], d: 1 }
   ];
 }
 
@@ -56,8 +67,8 @@ let spaces = [
     criteria: [
       { name: "空間採光", opts: [{ l: "無採光", v: "not ok" }, { l: "間接採光", v: 0.6 }, { l: "直接採光", v: 1.0 }], d: 2 },
       { name: "連接陽台", opts: [{ l: "無連接", v: 0 }, { l: "有連接", v: 1.0 }], d: 0 },
-      { name: "客廳深度", opts: [{ l: "<2.8m", v: "not ok" }, { l: "<3m", v: 0.6 }, { l: "≥3m", v: 1.0 }, { l: ">3.2m", v: 1.2 }, { l: ">3.6m", v: 1.4 }], d: 2 },
-      { name: "沙發座數", opts: [{ l: "座位<居住人數", v: 0.6 }, { l: "符合居住人數", v: 1.0 }], d: 1 }
+      { name: "客廳深度", opts: [{ l: "<2.8m", v: "not ok" }, { l: "<3~2.8m", v: 0.6 }, { l: "≥3m", v: 1.0 }, { l: ">3.2m", v: 1.2 }, { l: ">3.6m", v: 1.4 }], d: 2 },
+      { name: "沙發座數", opts: [{ l: "<居住人數", v: 0.6 }, { l: "符合居住人數", v: 1.0 }], d: 1 }
     ]
   },
   {
@@ -71,33 +82,63 @@ let spaces = [
   {
     id: "chu_fang", name: "廚房", enabled: true,
     criteria: [
-      { name: "檯面深度", opts: [{ l: "<60cm", v: 0 }, { l: "≥60cm", v: 1.0 }], d: 1 },
+      { name: "檯面深度", opts: [{ l: "<60cm", v: "not ok" }, { l: "≥60cm", v: 1.0 }], d: 1 },
       { name: "料理台寬度", opts: [{ l: "<60cm", v: 0 }, { l: "≥60cm", v: 0.6 }, { l: ">70cm", v: 0.8 }, { l: ">80cm", v: 1.0 }], d: 3 },
       { name: "走道淨寬", opts: [{ l: "<70cm", v: "not ok" }, { l: "≥70cm", v: 0.6 }, { l: ">80cm", v: 1.0 }, { l: ">90cm", v: 1.2 }], d: 2 },
       { name: "排油煙路徑", opts: [{ l: ">5m", v: 0.6 }, { l: "≤5m", v: 0.8 }, { l: "<1m", v: 1.0 }], d: 2 },
-      { name: "留設電器櫃位置", opts: [{ l: "無電器櫃", v: 0 }, { l: "有", v: 1.0 }], d: 1 },
+      { name: "電器櫃", opts: [{ l: "無設置", v: 0 }, { l: "有設置", v: 1.0 }], d: 1 },
       { name: "是否連接工作陽台", opts: [{ l: "無連接", v: 0 }, { l: "有連接", v: 1.0 }], d: 0 }
     ]
   },
   {
     id: "zhong_dao", name: "中島空間", enabled: false,
     criteria: [
-      { name: "中島檯面長度", opts: [{ l: "<120cm", v: 0.6 }, { l: "120~180cm", v: 1.0 }, { l: ">180cm", v: 1.2 }], d: 1 },
-      { name: "中島檯面深度", opts: [{ l: "<60cm", v: "not ok" }, { l: "60~80cm", v: 1.0 }, { l: ">80cm", v: 1.2 }], d: 1 },
-      { name: "環狀走道淨寬", opts: [{ l: "<80cm", v: "not ok" }, { l: "80~90cm", v: 0.8 }, { l: ">90cm", v: 1.0 }], d: 2 },
-      { name: "留設水槽", opts: [{ l: "無留設", v: 0 }, { l: "有留設", v: 1.0 }], d: 0 },
-      { name: "留設輕食IH爐", opts: [{ l: "無留設", v: 0 }, { l: "有留設", v: 1.0 }], d: 0 },
-      { name: "結合餐桌機能", opts: [{ l: "無結合", v: 0 }, { l: "有結合", v: 1.0 }], d: 0 }
+      { 
+        name: "檯面長度", 
+        opts: [
+          { l: "<90cm", v: "not ok" },
+          { l: "≥90cm", v: 0.6 },
+          { l: ">100cm", v: 0.8 },
+          { l: ">120cm", v: 1.0 },
+          { l: ">150cm", v: 1.2 },
+          { l: ">180cm", v: 1.4 }
+        ], 
+        d: 3 
+      },
+      { 
+        name: "檯面深度", 
+        opts: [
+          { l: "<60cm", v: "not ok" },
+          { l: "≥60cm", v: 0.6 },
+          { l: ">70cm", v: 0.8 },
+          { l: ">80cm", v: 1.0 },
+          { l: ">90cm", v: 1.2 },
+          { l: ">120cm", v: 1.4 }
+        ], 
+        d: 3 
+      },
+      { 
+        name: "環狀走道淨寬", 
+        opts: [
+          { l: "<70cm", v: "not ok" },
+          { l: "≥70cm", v: 0.6 },
+          { l: ">80cm", v: 1.0 },
+          { l: ">90cm", v: 1.2 }
+        ], 
+        d: 2 
+      },
+      { name: "設置水槽", opts: [{ l: "無設置", v: 0 }, { l: "有設置", v: 1.0 }], d: 0 },
+      { name: "設置IH爐", opts: [{ l: "無設置", v: 0 }, { l: "有設置", v: 1.0 }], d: 0 },
+      { name: "結合餐桌", opts: [{ l: "無結合", v: 0 }, { l: "有結合", v: 1.0 }], d: 0 }
     ]
   },
   {
     id: "yang_tai", name: "工作陽台", enabled: true,
     criteria: [
-      { name: "設置室外機", opts: [{ l: "無設置", v: 0 }, { l: "有設置", v: 1.0 }], d: 1 },
-      { name: "設置洗衣機", opts: [{ l: "無設置", v: "not ok" }, { l: "有設置", v: 1.0 }], d: 1 },
-      { name: "設置洗衣槽", opts: [{ l: "無設置", v: 0.0 }, { l: "有設置", v: 1.0 }], d: 1 },
-      { name: "設置曬衣架", opts: [{ l: "無設置", v: 0 }, { l: "有設置", v: 1.0 }], d: 1 }, // 修正為「設置曬衣架」
-      { name: "開門窗是否影響曬衣架", opts: [{ l: "有影響", v: 0 }, { l: "無影響", v: 1.0 }], d: 1 },
+      { name: "設置室外機", opts: [{ l: "無法設置", v: 0 }, { l: "可設置", v: 1.0 }], d: 1 },
+      { name: "設置洗衣機", opts: [{ l: "無法設置", v: "not ok" }, { l: "可設置", v: 1.0 }], d: 1 },
+      { name: "設置洗衣槽", opts: [{ l: "無法設置", v: 0.0 }, { l: "可設置", v: 1.0 }], d: 1 },
+      { name: "設置曬衣架", opts: [{ l: "無法設置", v: 0 }, { l: "可設置", v: 1.0 }], d: 1 },
       { 
         name: "坪數大小", 
         opts: [
@@ -117,13 +158,26 @@ let spaces = [
     criteria: [
       { name: "空間採光", opts: [{ l: "無採光", v: "not ok" }, { l: "間接採光", v: 0.6 }, { l: "直接採光", v: 1.0 }], d: 2 },
       { name: "連接陽台", opts: [{ l: "無連接", v: 0 }, { l: "有連接", v: 1.0 }], d: 0 },
-      { name: "床邊留設走道數", opts: [{ l: "<三邊", v: "not ok" }, { l: "三邊", v: 1.0 }], d: 1 },
-      { name: "床邊走道淨寬", opts: [{ l: "<50cm", v: 0 }, { l: "≥50cm", v: 0.6 }, { l: ">60cm", v: 1.0 }, { l: ">70cm", v: 1.2 }, { l: ">80cm", v: 1.4 }, { l: ">90cm", v: 1.6 }], d: 2 },
-      { name: "衣櫃長度", opts: [{ l: "<150cm", v: 0 }, { l: "≥150cm", v: 0.6 }, { l: ">180cm", v: 0.8 }, { l: ">200cm", v: 1.0 }, { l: ">250cm", v: 1.2 }, { l: ">300cm", v: 1.6 }], d: 3 },
+      { name: "床邊留設走道數", opts: [{ l: "<兩邊", v: "not ok" }, { l: "≥兩邊", v: 0.4 }, { l: ">三邊", v: 1.0 }], d: 2 },
+      { name: "床邊走道平均淨寬", opts: [{ l: "<50cm", v: 0 }, { l: "≥50cm", v: 0.6 }, { l: ">60cm", v: 1.0 }, { l: ">70cm", v: 1.2 }, { l: ">80cm", v: 1.4 }, { l: ">90cm", v: 1.6 }], d: 2 },
+      { 
+        name: "衣櫃長度", 
+        opts: [
+          { l: "<105cm", v: "not ok" },
+          { l: "≥105cm", v: 0.2 },
+          { l: ">120cm", v: 0.4 },
+          { l: ">150cm", v: 0.6 },
+          { l: ">180cm", v: 0.8 },
+          { l: ">210cm", v: 1.0 },
+          { l: ">245cm", v: 1.2 },
+          { l: ">300cm", v: 1.4 }
+        ], 
+        d: 5 
+      },
       { name: "衣櫃深度", opts: [{ l: "<60cm", v: "not ok" }, { l: "≥60cm", v: 1.0 }, { l: ">65cm", v: 1.2 }], d: 1 },
-      { name: "衣櫃前淨空間", opts: [{ l: "<60cm", v: 0 }, { l: "≥60cm", v: 1.0 }, { l: ">70cm", v: 1.2 }, { l: ">80cm", v: 1.4 }, { l: ">90cm", v: 1.6 }], d: 1 },
+      { name: "衣櫃前淨寬", opts: [{ l: "<60cm", v: 0 }, { l: "≥60cm", v: 1.0 }, { l: ">70cm", v: 1.2 }, { l: ">80cm", v: 1.4 }, { l: ">90cm", v: 1.6 }], d: 1 },
       { name: "是否留設梳妝台", opts: [{ l: "無", v: 0 }, { l: "有", v: 1.0 }], d: 1 },
-      { name: "床具尺寸", opts: [{ l: "<5x6.2尺", v: 0 }, { l: "≥5x6.2尺", v: 0.6 }, { l: ">6x6.2尺", v: 1 }, { l: ">6x7尺", v: 1.2 }], d: 1 }
+      { name: "床具尺寸", opts: [{ l: "<5x6.2尺", v: "not ok" }, { l: "≥5x6.2尺", v: 0.6 }, { l: ">6x6.2尺", v: 1.0 }, { l: ">6x7尺", v: 1.2 }], d: 2 }
     ]
   },
   { id: "zhu_wo_bath", name: "主臥浴室", enabled: false, isSuiteBath: true, criteria: JSON.parse(JSON.stringify(bathCriteriaTemplate)) },
@@ -138,9 +192,9 @@ let spaces = [
     id: "plus_one", name: "+1 房", enabled: false,
     criteria: [
       { name: "開窗", opts: [{ l: "無開窗", v: 0 }, { l: "有開窗", v: 1.0 }], d: 1 },
-      { name: "淨寬", opts: [{ l: "<2m", v: "not ok" }, { l: "≥2m", v: 1.0 }], d: 0 },
+      { name: "淨寬", opts: [{ l: "<2m", v: "not ok" }, { l: "≥2m", v: 1.0 }], d: 1 },
       { name: "可否配置床具", opts: [{ l: "無配置", v: 0 }, { l: "單人床", v: 1.0 }, { l: "加大單人床", v: 1.2 }], d: 1 },
-      { name: "是否設置衣櫃", opts: [{ l: "無配置", v: 0 }, { l: "有配置", v: 1.0 }], d: 1 }
+      { name: "可否設置衣櫃", opts: [{ l: "無配置", v: 0 }, { l: "有配置", v: 1.0 }], d: 1 }
     ]
   }
 ];
@@ -188,6 +242,33 @@ function setEnable(id, isEnable) {
     sp.enabled = isEnable;
     const card = document.getElementById(`card_${id}`);
     if (card) card.classList.toggle("hidden", !isEnable);
+  }
+}
+
+/**
+ * 浴室選項防呆連動：兩件式時禁用「三角配置」並強制設為「否(1.0)」
+ */
+function syncTriangleState(sp) {
+  const suiteCrit = sp.criteria.find(c => c.name === "套件數");
+  const triIdx = sp.criteria.findIndex(c => c.name === "三角配置");
+  if (!suiteCrit || triIdx === -1) return;
+
+  const isTwoPiece = suiteCrit.opts[suiteCrit.d]?.l === "兩件式";
+  const card = document.getElementById(`card_${sp.id}`);
+  if (card) {
+    const selects = card.querySelectorAll("select.crit-select");
+    const selTri = selects[triIdx];
+    if (selTri) {
+      selTri.disabled = isTwoPiece;
+      if (isTwoPiece) {
+        const noTriIdx = sp.criteria[triIdx].opts.findIndex(o => o.l === "否");
+        if (noTriIdx !== -1) {
+          sp.criteria[triIdx].d = noTriIdx;
+          selTri.value = noTriIdx;
+          selTri.classList.remove("not-ok");
+        }
+      }
+    }
   }
 }
 
@@ -243,6 +324,7 @@ function renderSpaces() {
       <div class="criteria-grid">${criteriaHtml}</div>
     `;
     container.appendChild(card);
+    syncTriangleState(sp);
   });
 
   setPreset('2');
@@ -255,16 +337,18 @@ function onCritChange(spIdx, critIdx, el) {
   el.classList.toggle("not-ok", crit.opts[crit.d]?.v === "not ok");
 
   if (crit.name === "套件數") {
+    const isFourPiece = crit.opts[crit.d]?.l === "四件式";
     const tubIdx = sp.criteria.findIndex(c => c.name === "浴缸尺寸");
     if (tubIdx !== -1) {
-      const targetTubIdx = crit.opts[crit.d]?.l === "四件式"
-        ? sp.criteria[tubIdx].opts.findIndex(o => o.l === "<145cm")
+      const targetTubIdx = isFourPiece
+        ? sp.criteria[tubIdx].opts.findIndex(o => o.l === "≥145cm")
         : sp.criteria[tubIdx].opts.findIndex(o => o.l === "未設置");
       if (targetTubIdx !== -1) {
         sp.criteria[tubIdx].d = targetTubIdx;
         syncSelectUI(sp.id, tubIdx, targetTubIdx);
       }
     }
+    syncTriangleState(sp);
   }
 
   calculateAll();
@@ -279,13 +363,12 @@ function toggleSpaceActive(spaceId, isActive) {
   if (card) {
     card.classList.toggle("is-disabled", !isActive);
     card.querySelectorAll("select.crit-select").forEach(sel => sel.disabled = !isActive);
+    // 連動修復 1：重新打勾啟用時，防呆鎖定兩件式三角配置
+    if (isActive) syncTriangleState(sp);
   }
   calculateAll();
 }
 
-/**
- * 表頭勾選特殊加分空間（中島、1房玄關）
- */
 function toggleBonusSpace(spaceId, isChecked) {
   const sp = spaces.find(s => s.id === spaceId);
   if (sp) {
@@ -297,29 +380,21 @@ function toggleBonusSpace(spaceId, isChecked) {
   calculateAll();
 }
 
-/**
- * 依表頭格局與套房數，精確依序分配：主臥 -> 次臥1 -> 次臥2 -> 次臥3
- */
 function updateLayoutConfig() {
   const { roomType, hasPlusOne, suiteCount } = getCurrentLayoutState();
 
-  // 基礎核心空間常態啟用
   ["ke_ting", "can_ting", "chu_fang", "yang_tai", "zhu_wo", "ke_yu"].forEach(id => setEnable(id, true));
 
-  // 玄關：2房以上或1+1房為必備；1房未+1時由表頭加分勾選控制
   const isXuanGuanRequired = roomType >= 2 || (roomType === 1 && hasPlusOne);
   const chkBonusXG = document.getElementById("chkBonusXuanGuan");
   const lblBonusXG = document.getElementById("lblBonusXuanGuan");
   if (lblBonusXG) lblBonusXG.style.display = (roomType === 1 && !hasPlusOne) ? "inline-flex" : "none";
   setEnable("xuan_guan", isXuanGuanRequired || (chkBonusXG ? chkBonusXG.checked : false));
 
-  // 次臥房依房型開合
   setEnable("ci_wo_1", roomType >= 2);
   setEnable("ci_wo_2", roomType >= 3);
   setEnable("ci_wo_3", roomType >= 4);
 
-  // 套房衛浴嚴格依套房數量循序啟用：
-  // 3房以上主臥套浴為必備基準；1、2房則依套房數 >= 1 啟用
   const hasZhuWoBath = (roomType >= 3) || (suiteCount >= 1);
   setEnable("zhu_wo_bath", hasZhuWoBath);
   setEnable("ci_wo_1_bath", roomType >= 2 && suiteCount >= 2);
@@ -328,7 +403,6 @@ function updateLayoutConfig() {
 
   setEnable("plus_one", hasPlusOne);
 
-  // 獨立中島空間：由表頭勾選控制
   const chkBonusZD = document.getElementById("chkBonusZhongDao");
   setEnable("zhong_dao", chkBonusZD ? chkBonusZD.checked : false);
 
@@ -336,7 +410,7 @@ function updateLayoutConfig() {
 }
 
 // ==========================================
-// 評分計算與基準判定 (正規權重百分制)
+// 評分計算與基準判定
 // ==========================================
 
 function isBaselineRequiredSpace(spaceId, roomType, hasPlusOne) {
@@ -360,10 +434,10 @@ function isBonusSpace(spaceId, roomType, hasPlusOne) {
 }
 
 function getBonusMaxScore(spaceId) {
-  if (spaceId === "xuan_guan") return 6.0;    // 1房加選玄關：比照4房玄關分配6分
-  if (spaceId === "zhu_wo_bath") return 10.0; // 2房加選主臥套房：比照4房浴室10分
+  if (spaceId === "xuan_guan") return 6.0;
+  if (spaceId === "zhu_wo_bath") return 10.0;
   if (["ci_wo_1_bath", "ci_wo_2_bath", "ci_wo_3_bath"].includes(spaceId)) return 10.0;
-  if (spaceId === "zhong_dao") return 6.0;    // 獨立中島空間：最高+6分
+  if (spaceId === "zhong_dao") return 6.0;
   return 0.0;
 }
 
@@ -387,7 +461,6 @@ function calculateAll() {
       const minVal = validScores.length ? Math.min(...validScores) : 0;
       const maxVal = validScores.length ? Math.max(...validScores) : 0;
 
-      // 滿分基準分：優先取 1.0；若無 1.0 (如純加分項) 則取預設標準配置分
       const hasOne = crit.opts.some(o => o.v === 1.0);
       const defaultIdx = defaultSpacesData[spIdx]?.criteria[critIdx]?.d ?? 0;
       const defaultVal = typeof crit.opts[defaultIdx]?.v === 'number' ? crit.opts[defaultIdx].v : 0;
@@ -419,7 +492,6 @@ function calculateAll() {
       rawSum += spRaw;
     }
 
-    // 內部得分率：以滿分標準 spStd 為分母折算
     let ratio = 0.0;
     if (sp.enabled && sp.userActive !== false && spRaw > 0) {
       if (spHigh > spLow) {
@@ -437,13 +509,20 @@ function calculateAll() {
       let spaceFinalScore = 0;
 
       if (sp.enabled && sp.userActive !== false && !hasNotOk) {
-        // 低標拿權重之 60%，達到滿分標準時拿滿 100% 權重，頂規加分時向上突破
-        spaceFinalScore = weight * (0.6 + 0.4 * (spStd > spLow ? (spRaw - spLow) / (spStd - spLow) : 1.0));
+        if (spStd > 0) {
+          if (spRaw <= spStd) {
+            spaceFinalScore = weight * (spRaw / spStd);
+          } else {
+            const extraRatio = (spHigh > spStd) ? (spRaw - spStd) / (spHigh - spStd) : 0;
+            spaceFinalScore = weight * (1.0 + 0.2 * extraRatio);
+          }
+        } else {
+          spaceFinalScore = weight;
+        }
       }
       totalBaseScore += spaceFinalScore;
     }
 
-    // 更新卡片右上角四個數據
     const elLow = document.getElementById(`low_${sp.id}`);
     const elStd = document.getElementById(`std_${sp.id}`);
     const elHigh = document.getElementById(`high_${sp.id}`);
@@ -466,8 +545,6 @@ function calculateAll() {
   const finalEl = document.getElementById("dispFinal");
   if (finalEl) {
     finalEl.innerText = finalScore.toFixed(1);
-    
-    // >= 59.5 均認定為及格合格顏色 (var(--primary))
     finalEl.style.color = finalScore > 100 
       ? "#b45309" 
       : finalScore >= 80 
@@ -508,7 +585,6 @@ function updateSuiteOptions(roomType, shouldAllocate = true) {
   suiteSel.innerHTML = html;
 
   if (shouldAllocate) {
-    // 1房與2房預設0套；3房以上預設1套(主臥套房)
     const defaultCount = (roomType <= 2) ? 0 : 1;
     suiteSel.value = defaultCount;
   }
@@ -526,15 +602,7 @@ function togglePlusOne(checked) {
   updateSpecTitle();
 }
 
-/**
- * 一鍵套用分數預設功能：
- * max: 選取最高分選項 (包含 >1.0 的豪宅頂規加分)
- * standard: 選取 = 1.0 的選項 (標準配備，必備總分剛好達 100.0 滿分)
- * min: 選取最低分選項 (及格低標，必備總分剛好達 60.0 分)
- * @param {'max'|'standard'|'min'} mode
- */
 function applyExtremePreset(mode) {
-  // 1. 還原所有空間的有效啟用狀態
   spaces.forEach(sp => {
     sp.userActive = true;
     const chk = document.getElementById(`toggle_${sp.id}`);
@@ -546,8 +614,7 @@ function applyExtremePreset(mode) {
     }
   });
 
-  // 2. 針對目前已啟用且可見之空間切換選項
-  spaces.forEach((sp) => {
+  spaces.forEach((sp, spIdx) => {
     if (!sp.enabled || sp.userActive === false) return;
 
     sp.criteria.forEach((crit, critIdx) => {
@@ -557,22 +624,22 @@ function applyExtremePreset(mode) {
 
       let targetOpt;
       if (mode === 'max') {
-        // 最高標分：挑選數值最大者 (包含 1.2, 1.4, 1.6 等頂規加分)
         targetOpt = validOpts.reduce((prev, curr) => (curr.v > prev.v ? curr : prev));
       } else if (mode === 'standard') {
-        // 標準滿分：優先挑選 v === 1.0 的標準配備；若無剛好 1.0 則挑選最接近且大於 0 的及格選項
         targetOpt = validOpts.find(o => o.v === 1.0);
         if (!targetOpt) {
-          targetOpt = validOpts.reduce((prev, curr) => Math.abs(curr.v - 1.0) < Math.abs(prev.v - 1.0) ? curr : prev);
+          const defaultOrigIdx = defaultSpacesData[spIdx]?.criteria[critIdx]?.d ?? 0;
+          targetOpt = validOpts.find(o => o.origIdx === defaultOrigIdx) || validOpts[0];
         }
       } else {
-        // 最低標分：挑選最小值
         targetOpt = validOpts.reduce((prev, curr) => (curr.v < prev.v ? curr : prev));
       }
 
       crit.d = targetOpt.origIdx;
       syncSelectUI(sp.id, critIdx, targetOpt.origIdx);
     });
+
+    syncTriangleState(sp);
   });
 
   calculateAll();
@@ -597,6 +664,8 @@ function resetToDefault() {
       sp.criteria[critIdx].d = origCrit.d;
       syncSelectUI(sp.id, critIdx, origCrit.d);
     });
+
+    syncTriangleState(sp);
   });
 
   const chkPlusOne = document.getElementById("chkPlusOne");
@@ -607,6 +676,9 @@ function resetToDefault() {
 
   const chkBonusXG = document.getElementById("chkBonusXuanGuan");
   if (chkBonusXG) chkBonusXG.checked = false;
+
+  const selSuite = document.getElementById("selSuiteCount");
+  if (selSuite) selSuite.value = "0";
 
   removeFloorPlan();
 
@@ -644,12 +716,6 @@ function updateSpecTitle() {
   } catch (e) { }
 }
 
-/**
- * 繪製或更新 Chart.js 雷達圖：
- * 1. 最低標 (raw === low) 時，各項精準對齊 60 分紅色虛線
- * 2. 標準滿分 (raw === std) 時，各項精準對齊 100 分綠色虛線
- * 3. 頂規加分 (raw > std) 時，向外延展突破 100 分 (120~140)
- */
 function updateRadarChart() {
   const canvas = document.getElementById("radarChart");
   if (!canvas || typeof Chart === "undefined") return;
@@ -676,28 +742,20 @@ function updateRadarChart() {
     const isBonus = isBonusSpace(sp.id, roomType, hasPlusOne);
 
     if (isBonus) {
-      // 特殊加分空間：基本具備即達 100 分，依高標向上突破至 120~140 分
       if (high <= low) return 100;
       const bonusRate = Math.max(0, Math.min(1, (raw - low) / (high - low)));
       return Math.round(100 + bonusRate * 40);
     } else {
-      // 標準必備空間：
-      // 1. 低於標準滿分：在 60 分 ~ 100 分之間平滑映射
+      if (std <= 0) return 100;
       if (raw <= std) {
-        if (std <= low) return 100;
-        const ratio = Math.max(0, Math.min(1, (raw - low) / (std - low)));
-        return Math.round(60 + 40 * ratio);
-      } 
-      // 2. 超越標準滿分 (有選取 >1.0 之加分項目)：自 100 分向外延展至 120 分
-      else {
-        if (high <= std) return 100;
-        const extraRatio = Math.max(0, Math.min(1, (raw - std) / (high - std)));
+        return Math.round((raw / std) * 100);
+      } else {
+        const extraRatio = (high > std) ? (raw - std) / (high - std) : 0;
         return Math.round(100 + 20 * extraRatio);
       }
     }
   });
 
-  // 動態擴展雷達圖上限：有超越 100 分時，坐標軸自動擴展至 120 或 140
   const maxVal = Math.max(...dataValues, 100);
   const dynamicMax = Math.ceil(maxVal / 20) * 20;
 
@@ -920,6 +978,12 @@ function confirmImportFromAI() {
       if (chk) chk.checked = !!data.hasBonusZhongDao;
     }
 
+    // 連動修復 2：還原 1 房獨立玄關勾選狀態
+    if (data.hasBonusXuanGuan !== undefined) {
+      const chk = document.getElementById("chkBonusXuanGuan");
+      if (chk) chk.checked = !!data.hasBonusXuanGuan;
+    }
+
     if (data.conclusion !== undefined) {
       const el = document.getElementById("iptConclusion");
       if (el) el.value = data.conclusion;
@@ -969,6 +1033,9 @@ function confirmImportFromAI() {
       if (selSuite) selSuite.value = data.suiteCount;
     }
 
+    // 連動修復 3：匯入後全面檢查衛浴兩件式並鎖定三角配置
+    spaces.forEach(sp => syncTriangleState(sp));
+
     updateLayoutConfig();
     updateSpecTitle();
     closeAiModal();
@@ -983,6 +1050,7 @@ function exportCurrentJSON() {
   try {
     const { roomType, hasPlusOne, suiteCount } = getCurrentLayoutState();
     const chkBonusZD = document.getElementById("chkBonusZhongDao");
+    const chkBonusXG = document.getElementById("chkBonusXuanGuan");
     const selections = {};
     spaces.forEach(sp => { selections[sp.id] = sp.criteria.map(c => c.d); });
 
@@ -993,6 +1061,7 @@ function exportCurrentJSON() {
       hasPlusOne: hasPlusOne,
       suiteCount: suiteCount,
       hasBonusZhongDao: chkBonusZD ? chkBonusZD.checked : false,
+      hasBonusXuanGuan: chkBonusXG ? chkBonusXG.checked : false, // 連動修復 2：打包獨立玄關狀態
       disabledSpaces: spaces.filter(sp => sp.userActive === false).map(sp => sp.id),
       conclusion: getIptVal("iptConclusion"),
       selections: selections
