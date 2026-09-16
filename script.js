@@ -859,21 +859,21 @@ function updateRadarChart() {
       label: "標準滿分線 (100分)",
       data: highThresholdData,
       backgroundColor: "transparent",
-      borderColor: "rgba(220, 38, 38, 0.6)",
-      borderWidth: 1.5,
-      borderDash: [3, 3],
-      pointRadius: 0,
-      order: 3
-    },
-    {
-      label: "標準滿分線 (100分)",
-      data: highThresholdData,
-      backgroundColor: "transparent",
       borderColor: "rgba(22, 163, 74, 0.7)",
       borderWidth: 1.8,
       borderDash: [4, 4],
       pointRadius: 0,
       order: 2
+    },
+    {
+      label: "低標合格線 (60分)",
+      data: lowThresholdData,
+      backgroundColor: "transparent",
+      borderColor: "rgba(220, 38, 38, 0.6)",
+      borderWidth: 1.5,
+      borderDash: [3, 3],
+      pointRadius: 0,
+      order: 3
     }
   ];
 
