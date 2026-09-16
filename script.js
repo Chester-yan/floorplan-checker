@@ -644,6 +644,12 @@ function updateSpecTitle() {
   } catch (e) { }
 }
 
+/**
+ * 繪製或更新 Chart.js 雷達圖：
+ * 1. 最低標 (raw === low) 時，各項精準對齊 60 分紅色虛線
+ * 2. 標準滿分 (raw === std) 時，各項精準對齊 100 分綠色虛線
+ * 3. 頂規加分 (raw > std) 時，向外延展突破 100 分 (120~140)
+ */
 function updateRadarChart() {
   const canvas = document.getElementById("radarChart");
   if (!canvas || typeof Chart === "undefined") return;
@@ -662,6 +668,7 @@ function updateRadarChart() {
     if (sp.userActive === false) return 0;
 
     const low = parseFloat(document.getElementById(`low_${sp.id}`)?.innerText || 0);
+    const std = parseFloat(document.getElementById(`std_${sp.id}`)?.innerText || 1);
     const high = parseFloat(document.getElementById(`high_${sp.id}`)?.innerText || 1);
     const raw = parseFloat(document.getElementById(`raw_${sp.id}`)?.innerText || 0);
 
@@ -669,15 +676,28 @@ function updateRadarChart() {
     const isBonus = isBonusSpace(sp.id, roomType, hasPlusOne);
 
     if (isBonus) {
-      const bonusRate = (high > low) ? Math.max(0, Math.min(1, (raw - low) / (high - low))) : 1.0;
+      // 特殊加分空間：基本具備即達 100 分，依高標向上突破至 120~140 分
+      if (high <= low) return 100;
+      const bonusRate = Math.max(0, Math.min(1, (raw - low) / (high - low)));
       return Math.round(100 + bonusRate * 40);
     } else {
-      if (high <= low) return 100;
-      const ratio = Math.max(0, Math.min(1, (raw - low) / (high - low)));
-      return Math.round(ratio * 100);
+      // 標準必備空間：
+      // 1. 低於標準滿分：在 60 分 ~ 100 分之間平滑映射
+      if (raw <= std) {
+        if (std <= low) return 100;
+        const ratio = Math.max(0, Math.min(1, (raw - low) / (std - low)));
+        return Math.round(60 + 40 * ratio);
+      } 
+      // 2. 超越標準滿分 (有選取 >1.0 之加分項目)：自 100 分向外延展至 120 分
+      else {
+        if (high <= std) return 100;
+        const extraRatio = Math.max(0, Math.min(1, (raw - std) / (high - std)));
+        return Math.round(100 + 20 * extraRatio);
+      }
     }
   });
 
+  // 動態擴展雷達圖上限：有超越 100 分時，坐標軸自動擴展至 120 或 140
   const maxVal = Math.max(...dataValues, 100);
   const dynamicMax = Math.ceil(maxVal / 20) * 20;
 
@@ -696,11 +716,11 @@ function updateRadarChart() {
       order: 1
     },
     {
-      label: "高標滿分線 (100分)",
+      label: "標準滿分線 (100分)",
       data: highThresholdData,
       backgroundColor: "transparent",
-      borderColor: "rgba(22, 163, 74, 0.6)",
-      borderWidth: 1.5,
+      borderColor: "rgba(22, 163, 74, 0.7)",
+      borderWidth: 1.8,
       borderDash: [4, 4],
       pointRadius: 0,
       order: 2
@@ -709,7 +729,7 @@ function updateRadarChart() {
       label: "低標合格線 (60分)",
       data: lowThresholdData,
       backgroundColor: "transparent",
-      borderColor: "rgba(220, 38, 38, 0.5)",
+      borderColor: "rgba(220, 38, 38, 0.6)",
       borderWidth: 1.5,
       borderDash: [3, 3],
       pointRadius: 0,
@@ -803,15 +823,15 @@ function exportReportPDF() {
     </div>
     <div style="display: flex; gap: 24px; align-items: center;">
       <div style="display: flex; flex-direction: column; text-align: left;">
-        <span style="font-size: 0.78rem; color: #64748b; margin-bottom: 2px;">低標分數加總</span>
+        <span style="font-size: 0.78rem; color: #64748b; margin-bottom: 2px;">低標及格線</span>
         <span style="font-size: 1.25rem; font-weight: 700; color: #1e293b;">${low}</span>
       </div>
       <div style="display: flex; flex-direction: column; text-align: left;">
-        <span style="font-size: 0.78rem; color: #64748b; margin-bottom: 2px;">高標分數加總</span>
+        <span style="font-size: 0.78rem; color: #64748b; margin-bottom: 2px;">頂規高標線</span>
         <span style="font-size: 1.25rem; font-weight: 700; color: #1e293b;">${high}</span>
       </div>
       <div style="display: flex; flex-direction: column; text-align: left;">
-        <span style="font-size: 0.78rem; color: #64748b; margin-bottom: 2px;">實得分數加總</span>
+        <span style="font-size: 0.78rem; color: #64748b; margin-bottom: 2px;">累計實得點數</span>
         <span style="font-size: 1.25rem; font-weight: 700; color: #1e293b;">${raw}</span>
       </div>
       <div style="display: flex; flex-direction: column; text-align: left;">
