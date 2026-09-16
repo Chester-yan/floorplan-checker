@@ -455,7 +455,15 @@ function calculateAll() {
   const finalEl = document.getElementById("dispFinal");
   if (finalEl) {
     finalEl.innerText = finalScore.toFixed(1);
-    finalEl.style.color = finalScore > 100 ? "#b45309" : finalScore >= 80 ? "var(--success)" : finalScore >= 60 ? "var(--primary)" : "var(--danger)";
+    
+    // >= 59.5 均認定為及格合格顏色 (var(--primary))
+    finalEl.style.color = finalScore > 100 
+      ? "#b45309" 
+      : finalScore >= 80 
+      ? "var(--success)" 
+      : finalScore >= 59.5 
+      ? "var(--primary)" 
+      : "var(--danger)";
   }
 
   updateRadarChart();
@@ -907,7 +915,13 @@ function confirmImportFromAI() {
       });
     }
 
+    if (data.roomType !== undefined) {
+      setPreset(String(data.roomType), false);
+    }
+
     if (data.suiteCount !== undefined) {
+      const currentRT = data.roomType !== undefined ? parseInt(data.roomType) : getCurrentLayoutState().roomType;
+      updateSuiteOptions(currentRT, false);
       const selSuite = document.getElementById("selSuiteCount");
       if (selSuite) selSuite.value = data.suiteCount;
     }
