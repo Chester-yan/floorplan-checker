@@ -20,7 +20,6 @@
     <!-- 第一行：建案戶號與房型規格、套房數量設定 -->
     <div class="type-selector" style="align-items: center; justify-content: space-between;">
       <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-        <!-- 建案與戶號輸入 -->
         <label style="display:inline-flex; align-items:center; gap:6px;">
           <span>建案名稱：</span>
           <input type="text" id="iptProjectName" placeholder="例如：遠雄中央公園" style="padding: 6px 10px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.9rem; width: 130px;" oninput="updateSpecTitle()">
@@ -33,7 +32,6 @@
 
         <span style="color: #cbd5e1;">|</span>
 
-        <!-- 房型按鈕群 -->
         <label>房型：</label>
         <div class="btn-group">
           <button type="button" class="type-btn" onclick="setPreset('1')">1房</button>
@@ -48,7 +46,7 @@
           <span>＋1房</span>
         </label>
 
-        <!-- 套房數量選擇器 -->
+        <!-- 套房數量選擇器 (唯一控制來源) -->
         <label style="font-weight: 600; font-size: 0.9rem; color: #1e293b; display: inline-flex; align-items: center; gap: 6px; margin-left: 4px;">
           <span>套房數量：</span>
           <select id="selSuiteCount" onchange="onSuiteCountChange(parseInt(this.value))" style="padding: 4px 8px; border-radius: 6px; border: 1px solid #cbd5e1; font-weight: 600; color: var(--primary);">
@@ -56,19 +54,31 @@
           </select>
         </label>
 
-        <!-- 當前規格標籤 -->
         <span id="dispRoomSpec" style="font-weight: 700; color: var(--primary); font-size: 0.95rem; background: #eff6ff; padding: 4px 10px; border-radius: 6px; border: 1px solid #bfdbfe;">
-          2房/1套房
+          2房/0套房
         </span>
       </div>
     </div>
 
-    <!-- 第二行：分數極端值套用按鈕群 -->
+    <!-- 第二行：特殊加分空間勾選開關 -->
+    <div class="type-selector" style="margin-top: 12px; padding-top: 12px; border-top: 1px dashed #e2e8f0; align-items: center; gap: 16px;">
+      <label style="color: #4338ca; font-weight: 700;">特殊加分空間：</label>
+      <label style="display:inline-flex; align-items:center; gap:6px; cursor:pointer; font-size:0.9rem; font-weight:600;">
+        <input type="checkbox" id="chkBonusZhongDao" onchange="toggleBonusSpace('zhong_dao', this.checked)" style="width:16px; height:16px; cursor:pointer;">
+        <span>獨立中島 (+6分)</span>
+      </label>
+      <label id="lblBonusXuanGuan" style="display:none; align-items:center; gap:6px; cursor:pointer; font-size:0.9rem; font-weight:600;">
+        <input type="checkbox" id="chkBonusXuanGuan" onchange="toggleBonusSpace('xuan_guan', this.checked)" style="width:16px; height:16px; cursor:pointer;">
+        <span>獨立玄關 (+6分)</span>
+      </label>
+    </div>
+
+    <!-- 第三行：分數極端值套用按鈕群 -->
     <div class="type-selector" style="margin-top: 12px; padding-top: 12px; border-top: 1px dashed #e2e8f0; align-items: center;">
       <label>分數套用：</label>
       <div class="btn-group">
         <button type="button" class="type-btn" onclick="applyExtremePreset('max')" style="background: #f0fdf4; border-color: #86efac; color: #166534; font-weight: 600;">
-          ★ 最高分
+          ★ 最高標分
         </button>
         <button type="button" class="type-btn" onclick="applyExtremePreset('min')" style="background: #fef2f2; border-color: #fecaca; color: #991b1b; font-weight: 600;">
           ▲ 最低標分
@@ -79,7 +89,7 @@
       </div>
     </div>
 
-    <!-- 第三行：AI 數據匯入與狀態 JSON 匯出 -->
+    <!-- 第四行：AI 數據匯入與狀態 JSON 匯出 -->
     <div class="type-selector" style="margin-top: 12px; padding-top: 12px; border-top: 1px dashed #e2e8f0; display: flex; gap: 12px;">
       <button type="button" class="type-btn" onclick="importFromAI()" style="flex: 1; background: #eef2ff; border-color: #a5b4fc; color: #4338ca; font-weight: 700; padding: 10px 0; font-size: 0.95rem; display: flex; align-items: center; justify-content: center; gap: 8px;">
         <span>⚡ 匯入 AI 檢核數據</span>
