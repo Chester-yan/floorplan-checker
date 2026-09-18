@@ -12,7 +12,7 @@ const SPACE_WEIGHTS = {
   4: { xuan_guan: 5, ke_ting: 16, can_ting: 10, chu_fang: 10, yang_tai: 10, zhu_wo: 11, zhu_wo_bath: 11, ke_yu: 9, ci_wo_1: 6, ci_wo_2: 6, ci_wo_3: 6 }
 };
 
-// 各空間專屬標準 60 分及格選項索引對應表
+// 各空間專屬標準 60 分及格選項索引對應表 (基準截圖參照)
 const SPACE_PASS_INDICES = {
   xuan_guan: [1, 1, 0],              // 實得 1.2
   ke_ting: [1, 0, 2, 0],             // 預設 1 房基準：實得 1.8 (客廳深度動態由 getSpacePassIndices 依房型指派)
@@ -35,6 +35,10 @@ const SPACE_PASS_INDICES = {
 
 /**
  * 依據當前房型尺度，動態取得空間及格選項索引
+ * 1房及格 >2.8m (idx: 2)
+ * 2房及格 >3.0m (idx: 4)
+ * 3房及格 >3.2m (idx: 5)
+ * 4房及格 >3.4m (idx: 6)
  */
 function getSpacePassIndices(spaceId, roomType) {
   if (spaceId === "ke_ting") {
@@ -227,6 +231,7 @@ let spaces = [
       { name: "床具尺寸", opts: [{ l: "<5x6.2尺", v: "not ok" }, { l: "≥5x6.2尺", v: 0.6 }, { l: ">6x6.2尺", v: 1.0 }, { l: ">6x7尺", v: 1.2 }], d: 2 }
     ]
   },
+
   {
     id: "geng_yi_jian", name: "更衣間", enabled: false,
     criteria: [
@@ -254,9 +259,10 @@ let spaces = [
         d: 3
       },
       { name: "精品中島櫃", opts: [{ l: "無設置", v: 0 }, { l: "有設置", v: 1.0 }], d: 0 },
-      { name: "梳妝台", opts: [{ l: "無設置", v: 0 }, { l: "有設置", v: 0 }], d: 1 }
+      { name: "梳妝台", opts: [{ l: "無設置", v: 0 }, { l: "有設置", v: 1.0 }], d: 0 }
     ]
   },
+
   { id: "zhu_wo_bath", name: "主臥浴室", enabled: false, isSuiteBath: true, criteria: JSON.parse(JSON.stringify(bathCriteriaTemplate)) },
   { id: "ci_wo_1", name: "次臥房 1", enabled: true, criteria: createSecondaryBedroomCriteria() },
   { id: "ci_wo_1_bath", name: "次臥浴室 1", enabled: false, isSuiteBath: true, criteria: JSON.parse(JSON.stringify(bathCriteriaTemplate)) },
@@ -323,7 +329,7 @@ function setEnable(id, isEnable) {
 }
 
 /**
- * 浴室選項防呆連動
+ * 浴室選項防呆連動：兩件式時禁用「三角配置」並強制設為「否(1.0)」
  */
 function syncTriangleState(sp) {
   const suiteCrit = sp.criteria.find(c => c.name === "套件數");
@@ -545,7 +551,7 @@ function calculateAll() {
       const minVal = validScores.length ? Math.min(...validScores) : 0;
       const maxVal = validScores.length ? Math.max(...validScores) : 0;
 
-      // 1. 滿分標準點數 (std)
+      // 1. 滿分標準點數 (std)：客廳深度隨房型尺度階梯式提升
       let stdVal;
       if (sp.id === "ke_ting" && crit.name === "客廳深度") {
         const depthStdValMap = { 1: 1.0, 2: 1.2, 3: 1.4, 4: 1.6 };
@@ -557,7 +563,7 @@ function calculateAll() {
         stdVal = hasOne ? 1.0 : defaultVal;
       }
 
-      // 2. 60分及格點數 (pass)
+      // 2. 60分及格點數 (pass)：依據空間基準與當前房型動態指派
       const pIdx = passIndices[critIdx] ?? 0;
       const pVal = crit.opts[pIdx]?.v;
       const passVal = typeof pVal === 'number' ? pVal : 0;
@@ -695,7 +701,12 @@ function togglePlusOne(checked) {
 }
 
 /**
- * 一鍵套用分數預設功能
+ * 一鍵套用分數預設功能：
+ * max: 選取最高分選項 (包含 >1.0 的豪宅頂規加分，客廳深度選到 >4m 1.8)
+ * standard: 選取標準滿分配置 (客廳深度隨 1~4 房動態適配 3.0m / 3.2m / 3.4m / 3.6m)
+ * pass: 精確套用及格配置 (客廳深度隨 1~4 房動態適配 2.8m / 3.0m / 3.2m / 3.4m)
+ * min: 選取除了 not ok 之外的最低數值選項
+ * @param {'max'|'standard'|'pass'|'min'} mode
  */
 function applyExtremePreset(mode) {
   const { roomType } = getCurrentLayoutState();
@@ -781,9 +792,6 @@ function resetToDefault() {
   const chkBonusZD = document.getElementById("chkBonusZhongDao");
   if (chkBonusZD) chkBonusZD.checked = false;
 
-  const chkBonusGYJ = document.getElementById("chkBonusGengYiJian");
-  if (chkBonusGYJ) chkBonusGYJ.checked = false;
-
   const chkBonusXG = document.getElementById("chkBonusXuanGuan");
   if (chkBonusXG) chkBonusXG.checked = false;
 
@@ -840,6 +848,7 @@ function updateRadarChart() {
 
   const labels = chartSpaces.map(sp => sp.name);
 
+// 替換 updateRadarChart 內 dataValues 計算邏輯
   const dataValues = chartSpaces.map(sp => {
     if (sp.userActive === false || sp.hasNotOk) return 0;
 
@@ -849,22 +858,16 @@ function updateRadarChart() {
     const raw = sp.spRaw || 0;
 
     if (raw === 0) return 0;
-    const isBonus = isBonusSpace(sp.id, roomType, hasPlusOne);
 
-    if (isBonus) {
-      if (std <= 0) return 100;
-      const bonusRate = Math.max(0, Math.min(1.2, raw / std));
-      return Math.round(bonusRate * 100);
+    // 加分空間與一般空間統一採三段式百分制換算，確保及格點數精確貼齊 60 分紅線
+    if (raw < pass) {
+      return Math.round(pass > 0 ? (60 * (raw / pass)) : 0);
+    } else if (raw <= std) {
+      const ratio = (std > pass) ? (raw - pass) / (std - pass) : 1.0;
+      return Math.round(60 + 40 * ratio);
     } else {
-      if (raw < pass) {
-        return Math.round(pass > 0 ? (60 * (raw / pass)) : 0);
-      } else if (raw <= std) {
-        const ratio = (std > pass) ? (raw - pass) / (std - pass) : 1.0;
-        return Math.round(60 + 40 * ratio);
-      } else {
-        const extraRatio = (high > std) ? (raw - std) / (high - std) : 0;
-        return Math.round(100 + 20 * extraRatio);
-      }
+      const extraRatio = (high > std) ? (raw - std) / (high - std) : 0;
+      return Math.round(100 + 20 * extraRatio);
     }
   });
 
@@ -1091,11 +1094,6 @@ function confirmImportFromAI() {
       if (chk) chk.checked = !!data.hasBonusZhongDao;
     }
 
-    if (data.hasBonusGengYiJian !== undefined) {
-      const chk = document.getElementById("chkBonusGengYiJian");
-      if (chk) chk.checked = !!data.hasBonusGengYiJian;
-    }
-
     if (data.hasBonusXuanGuan !== undefined) {
       const chk = document.getElementById("chkBonusXuanGuan");
       if (chk) chk.checked = !!data.hasBonusXuanGuan;
@@ -1166,7 +1164,6 @@ function exportCurrentJSON() {
   try {
     const { roomType, hasPlusOne, suiteCount } = getCurrentLayoutState();
     const chkBonusZD = document.getElementById("chkBonusZhongDao");
-    const chkBonusGYJ = document.getElementById("chkBonusGengYiJian");
     const chkBonusXG = document.getElementById("chkBonusXuanGuan");
     const selections = {};
     spaces.forEach(sp => { selections[sp.id] = sp.criteria.map(c => c.d); });
@@ -1178,7 +1175,6 @@ function exportCurrentJSON() {
       hasPlusOne: hasPlusOne,
       suiteCount: suiteCount,
       hasBonusZhongDao: chkBonusZD ? chkBonusZD.checked : false,
-      hasBonusGengYiJian: chkBonusGYJ ? chkBonusGYJ.checked : false,
       hasBonusXuanGuan: chkBonusXG ? chkBonusXG.checked : false,
       disabledSpaces: spaces.filter(sp => sp.userActive === false).map(sp => sp.id),
       conclusion: getIptVal("iptConclusion"),
