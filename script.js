@@ -871,7 +871,9 @@ function updateRadarChart() {
     }
   });
 
-  const maxVal = Math.max(...dataValues, 100);
+// 取得底部換算總分，若總分加分超過 120（如 141.6），雷達圖外圈自動擴展至該分數上限（如 150）
+  const finalScore = parseFloat(document.getElementById("dispFinal")?.innerText || "0");
+  const maxVal = Math.max(...dataValues, finalScore, 100);
   const dynamicMax = Math.ceil(maxVal / 10) * 10;
 
   const highThresholdData = labels.map(() => 100);
