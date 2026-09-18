@@ -12,7 +12,7 @@ const SPACE_WEIGHTS = {
   4: { xuan_guan: 5, ke_ting: 16, can_ting: 10, chu_fang: 10, yang_tai: 10, zhu_wo: 11, zhu_wo_bath: 11, ke_yu: 9, ci_wo_1: 6, ci_wo_2: 6, ci_wo_3: 6 }
 };
 
-// 各空間專屬標準 60 分及格選項索引對應表 (基準截圖參照)
+// 各空間專屬標準 60 分及格選項索引對應表
 const SPACE_PASS_INDICES = {
   xuan_guan: [1, 1, 0],              // 實得 1.2
   ke_ting: [1, 0, 2, 0],             // 預設 1 房基準：實得 1.8 (客廳深度動態由 getSpacePassIndices 依房型指派)
@@ -29,15 +29,12 @@ const SPACE_PASS_INDICES = {
   ci_wo_3_bath: [0, 1, 1, 1, 2, 0, 0, 0],
   ke_yu: [0, 1, 1, 1, 2, 0, 1, 1],   // 實得 4.8
   zhong_dao: [3, 3, 2, 1, 1, 0],     // 實得 5.0
+  geng_yi_jian: [2, 1, 0, 1],        // 實得 1.4 (衣櫃>180cm: 0.8, 走道≥70cm: 0.6, 中島無: 0, 梳妝台有: 0)
   plus_one: [0, 1, 1, 1]             // 實得 3.0
 };
 
 /**
  * 依據當前房型尺度，動態取得空間及格選項索引
- * 1房及格 >2.8m (idx: 2)
- * 2房及格 >3.0m (idx: 4)
- * 3房及格 >3.2m (idx: 5)
- * 4房及格 >3.4m (idx: 6)
  */
 function getSpacePassIndices(spaceId, roomType) {
   if (spaceId === "ke_ting") {
@@ -230,6 +227,36 @@ let spaces = [
       { name: "床具尺寸", opts: [{ l: "<5x6.2尺", v: "not ok" }, { l: "≥5x6.2尺", v: 0.6 }, { l: ">6x6.2尺", v: 1.0 }, { l: ">6x7尺", v: 1.2 }], d: 2 }
     ]
   },
+  {
+    id: "geng_yi_jian", name: "步入式更衣間", enabled: false,
+    criteria: [
+      { 
+        name: "衣櫃長度", 
+        opts: [
+          { l: "<150cm", v: "not ok" },
+          { l: "≥150cm", v: 0.6 },
+          { l: ">180cm", v: 0.8 },
+          { l: ">210cm", v: 1.0 },
+          { l: ">240cm", v: 1.2 },
+          { l: ">300cm", v: 1.4 }
+        ], 
+        d: 3
+      },
+      { 
+        name: "走道淨寬", 
+        opts: [
+          { l: "<70cm", v: "not ok" },
+          { l: "≥70cm", v: 0.6 },
+          { l: ">80cm", v: 0.8 },
+          { l: ">90cm", v: 1.0 },
+          { l: ">100cm", v: 1.2 }
+        ], 
+        d: 3
+      },
+      { name: "精品中島櫃", opts: [{ l: "無設置", v: 0 }, { l: "有設置", v: 1.0 }], d: 0 },
+      { name: "梳妝台", opts: [{ l: "無設置", v: 0 }, { l: "有設置", v: 0 }], d: 1 }
+    ]
+  },
   { id: "zhu_wo_bath", name: "主臥浴室", enabled: false, isSuiteBath: true, criteria: JSON.parse(JSON.stringify(bathCriteriaTemplate)) },
   { id: "ci_wo_1", name: "次臥房 1", enabled: true, criteria: createSecondaryBedroomCriteria() },
   { id: "ci_wo_1_bath", name: "次臥浴室 1", enabled: false, isSuiteBath: true, criteria: JSON.parse(JSON.stringify(bathCriteriaTemplate)) },
@@ -296,7 +323,7 @@ function setEnable(id, isEnable) {
 }
 
 /**
- * 浴室選項防呆連動：兩件式時禁用「三角配置」並強制設為「否(1.0)」
+ * 浴室選項防呆連動
  */
 function syncTriangleState(sp) {
   const suiteCrit = sp.criteria.find(c => c.name === "套件數");
@@ -455,6 +482,9 @@ function updateLayoutConfig() {
   const chkBonusZD = document.getElementById("chkBonusZhongDao");
   setEnable("zhong_dao", chkBonusZD ? chkBonusZD.checked : false);
 
+  const chkBonusGYJ = document.getElementById("chkBonusGengYiJian");
+  setEnable("geng_yi_jian", chkBonusGYJ ? chkBonusGYJ.checked : false);
+
   calculateAll();
 }
 
@@ -479,6 +509,7 @@ function isBonusSpace(spaceId, roomType, hasPlusOne) {
   const secondarySuiteBaths = ["ci_wo_1_bath", "ci_wo_2_bath", "ci_wo_3_bath"];
   if (secondarySuiteBaths.includes(spaceId)) return true;
   if (spaceId === "zhong_dao") return true;
+  if (spaceId === "geng_yi_jian") return true;
   if (spaceId === "plus_one" && hasPlusOne) return true;
   return false;
 }
@@ -488,6 +519,7 @@ function getBonusMaxScore(spaceId) {
   if (spaceId === "zhu_wo_bath") return 10.0;
   if (["ci_wo_1_bath", "ci_wo_2_bath", "ci_wo_3_bath"].includes(spaceId)) return 10.0;
   if (spaceId === "zhong_dao") return 6.0;
+  if (spaceId === "geng_yi_jian") return 6.0;
   if (spaceId === "plus_one") return 6.0;
   return 0.0;
 }
@@ -513,7 +545,7 @@ function calculateAll() {
       const minVal = validScores.length ? Math.min(...validScores) : 0;
       const maxVal = validScores.length ? Math.max(...validScores) : 0;
 
-      // 1. 滿分標準點數 (std)：客廳深度隨房型尺度階梯式提升
+      // 1. 滿分標準點數 (std)
       let stdVal;
       if (sp.id === "ke_ting" && crit.name === "客廳深度") {
         const depthStdValMap = { 1: 1.0, 2: 1.2, 3: 1.4, 4: 1.6 };
@@ -525,7 +557,7 @@ function calculateAll() {
         stdVal = hasOne ? 1.0 : defaultVal;
       }
 
-      // 2. 60分及格點數 (pass)：依據空間基準與當前房型動態指派
+      // 2. 60分及格點數 (pass)
       const pIdx = passIndices[critIdx] ?? 0;
       const pVal = crit.opts[pIdx]?.v;
       const passVal = typeof pVal === 'number' ? pVal : 0;
@@ -663,12 +695,7 @@ function togglePlusOne(checked) {
 }
 
 /**
- * 一鍵套用分數預設功能：
- * max: 選取最高分選項 (包含 >1.0 的豪宅頂規加分，客廳深度選到 >4m 1.8)
- * standard: 選取標準滿分配置 (客廳深度隨 1~4 房動態適配 3.0m / 3.2m / 3.4m / 3.6m)
- * pass: 精確套用及格配置 (客廳深度隨 1~4 房動態適配 2.8m / 3.0m / 3.2m / 3.4m)
- * min: 選取除了 not ok 之外的最低數值選項
- * @param {'max'|'standard'|'pass'|'min'} mode
+ * 一鍵套用分數預設功能
  */
 function applyExtremePreset(mode) {
   const { roomType } = getCurrentLayoutState();
@@ -753,6 +780,9 @@ function resetToDefault() {
 
   const chkBonusZD = document.getElementById("chkBonusZhongDao");
   if (chkBonusZD) chkBonusZD.checked = false;
+
+  const chkBonusGYJ = document.getElementById("chkBonusGengYiJian");
+  if (chkBonusGYJ) chkBonusGYJ.checked = false;
 
   const chkBonusXG = document.getElementById("chkBonusXuanGuan");
   if (chkBonusXG) chkBonusXG.checked = false;
@@ -858,16 +888,6 @@ function updateRadarChart() {
     {
       label: "標準滿分線 (100分)",
       data: highThresholdData,
-      backgroundColor: "transparent",
-      borderColor: "rgba(22, 163, 74, 0.7)",
-      borderWidth: 1.8,
-      borderDash: [4, 4],
-      pointRadius: 0,
-      order: 2
-    },
-    {
-      label: "低標合格線 (60分)",
-      data: lowThresholdData,
       backgroundColor: "transparent",
       borderColor: "rgba(220, 38, 38, 0.6)",
       borderWidth: 1.5,
@@ -1061,6 +1081,11 @@ function confirmImportFromAI() {
       if (chk) chk.checked = !!data.hasBonusZhongDao;
     }
 
+    if (data.hasBonusGengYiJian !== undefined) {
+      const chk = document.getElementById("chkBonusGengYiJian");
+      if (chk) chk.checked = !!data.hasBonusGengYiJian;
+    }
+
     if (data.hasBonusXuanGuan !== undefined) {
       const chk = document.getElementById("chkBonusXuanGuan");
       if (chk) chk.checked = !!data.hasBonusXuanGuan;
@@ -1131,6 +1156,7 @@ function exportCurrentJSON() {
   try {
     const { roomType, hasPlusOne, suiteCount } = getCurrentLayoutState();
     const chkBonusZD = document.getElementById("chkBonusZhongDao");
+    const chkBonusGYJ = document.getElementById("chkBonusGengYiJian");
     const chkBonusXG = document.getElementById("chkBonusXuanGuan");
     const selections = {};
     spaces.forEach(sp => { selections[sp.id] = sp.criteria.map(c => c.d); });
@@ -1142,6 +1168,7 @@ function exportCurrentJSON() {
       hasPlusOne: hasPlusOne,
       suiteCount: suiteCount,
       hasBonusZhongDao: chkBonusZD ? chkBonusZD.checked : false,
+      hasBonusGengYiJian: chkBonusGYJ ? chkBonusGYJ.checked : false,
       hasBonusXuanGuan: chkBonusXG ? chkBonusXG.checked : false,
       disabledSpaces: spaces.filter(sp => sp.userActive === false).map(sp => sp.id),
       conclusion: getIptVal("iptConclusion"),
