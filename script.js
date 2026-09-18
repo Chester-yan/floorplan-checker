@@ -228,7 +228,7 @@ let spaces = [
     ]
   },
   {
-    id: "geng_yi_jian", name: "步入式更衣間", enabled: false,
+    id: "geng_yi_jian", name: "更衣間", enabled: false,
     criteria: [
       { 
         name: "衣櫃長度", 
