@@ -450,16 +450,10 @@ function calculateAll() {
       const pIdx = passIndices[critIdx] ?? 0;
       const passV = typeof crit.opts[pIdx]?.v === 'number' ? crit.opts[pIdx].v : 0;
 
-      let stdV;
-      if (sp.id === "ke_ting" && crit.name === "客廳深度") {
-        const depthStdValMap = { 1: 1.0, 2: 1.2, 3: 1.4, 4: 1.6 };
-        stdV = depthStdValMap[roomType] ?? 1.2;
-      } else {
-        const hasOne = crit.opts.some(o => o.v === 1.0);
-        const defaultIdx = defaultSpacesData[spIdx]?.criteria[critIdx]?.d ?? 0;
-        const defaultVal = typeof crit.opts[defaultIdx]?.v === 'number' ? crit.opts[defaultIdx].v : 0;
-        stdV = hasOne ? 1.0 : defaultVal;
-      }
+      // 嚴格遵守 F = (OC=1) * B 定律，拔除所有假標準特例
+      const defaultIdx = defaultSpacesData[spIdx]?.criteria[critIdx]?.d ?? 0;
+      const targetOpt = crit.opts.find(o => o.v === 1.0) || crit.opts[defaultIdx];
+      const stdV = typeof targetOpt?.v === 'number' ? targetOpt.v : 0;
 
       sumMinV += minV;
       sumPassV += passV;
@@ -623,17 +617,9 @@ function applyExtremePreset(mode) {
       if (mode === 'max') {
         targetOpt = validOpts.reduce((prev, curr) => (curr.v > prev.v ? curr : prev));
       } else if (mode === 'standard') {
-        if (sp.id === "ke_ting" && crit.name === "客廳深度") {
-          const depthStdIdxMap = { 1: 4, 2: 5, 3: 6, 4: 7 };
-          const targetIdx = depthStdIdxMap[roomType] ?? 5;
-          targetOpt = validOpts.find(o => o.origIdx === targetIdx) || validOpts[0];
-        } else {
-          targetOpt = validOpts.find(o => o.v === 1.0);
-          if (!targetOpt) {
-            const defaultOrigIdx = defaultSpacesData[spIdx]?.criteria[critIdx]?.d ?? 0;
-            targetOpt = validOpts.find(o => o.origIdx === defaultOrigIdx) || validOpts[0];
-          }
-        }
+        // 嚴格遵守 F = (OC=1) 定律，拔除客廳深度的特例判定
+        const defaultOrigIdx = defaultSpacesData[spIdx]?.criteria[critIdx]?.d ?? 0;
+        targetOpt = validOpts.find(o => o.v === 1.0) || validOpts.find(o => o.origIdx === defaultOrigIdx) || validOpts[0];
       } else if (mode === 'pass') {
         const passIndices = getSpacePassIndices(sp.id, roomType);
         const pIdx = passIndices[critIdx] ?? 0;
