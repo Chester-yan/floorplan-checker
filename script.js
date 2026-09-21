@@ -12,7 +12,7 @@ const SPACE_WEIGHTS = {
   4: { xuan_guan: 5, ke_ting: 16, can_ting: 10, chu_fang: 10, yang_tai: 10, zhu_wo: 11, zhu_wo_bath: 11, ke_yu: 9, ci_wo_1: 6, ci_wo_2: 6, ci_wo_3: 6 }
 };
 
-// 各空間專屬標準及格選項索引對應表 (已依據截圖全面更新)
+// 各空間專屬標準及格選項索引對應表 (已精簡，統一次臥與一般浴室)
 const SPACE_PASS_INDICES = {
   xuan_guan: [1, 1, 0],
   ke_ting: [1, 0, 2, 0], 
@@ -20,26 +20,36 @@ const SPACE_PASS_INDICES = {
   chu_fang: [1, 1, 1, 0, 0, 0],
   yang_tai: [0, 1, 0, 1, 2],
   zhu_wo: [1, 0, 1, 1, 3, 1, 0, 1, 1],
-  ci_wo_1: [1, 0, 1, 1, 1, 1, 0, 0, 1],
-  ci_wo_2: [1, 0, 1, 1, 1, 1, 0, 0, 1],
-  ci_wo_3: [1, 0, 1, 1, 1, 1, 0, 0, 1],
   zhu_wo_bath: [0, 1, 1, 1, 2, 0, 1, 1],
-  ci_wo_1_bath: [0, 1, 1, 1, 2, 0, 1, 0],
-  ci_wo_2_bath: [0, 1, 1, 1, 2, 0, 1, 0],
-  ci_wo_3_bath: [0, 1, 1, 1, 2, 0, 1, 0],
-  ke_yu: [0, 1, 1, 1, 2, 0, 1, 0],
+  
+  // 建立「通用次臥」與「通用次衛浴」的唯一模板
+  ci_wo_template: [1, 0, 1, 1, 1, 1, 0, 0, 1],
+  common_bath_template: [0, 1, 1, 1, 2, 0, 1, 0],
+  
   zhong_dao: [1, 1, 1, 0, 0, 0],
-  geng_yi_jian: [1, 1, 0, 0], 
-  plus_one: [1, 1, 0, 0]
+  geng_yi_jian: [2, 2, 0, 0], 
+  plus_one: [0, 1, 1, 0]
 };
 
 function getSpacePassIndices(spaceId, roomType) {
+  // 1. 客廳：深度及格標準隨房型動態調整
   if (spaceId === "ke_ting") {
-    // 客廳深度及格標準隨房型動態調整
     const depthPassIdxMap = { 1: 2, 2: 4, 3: 5, 4: 6 };
     const depthIdx = depthPassIdxMap[roomType] ?? 4;
     return [1, 0, depthIdx, 0];
   }
+  
+  // 2. 次臥房：只要 ID 開頭是 ci_wo_ 且不含 bath，一律套用次臥模板
+  if (spaceId.startsWith("ci_wo_") && !spaceId.includes("bath")) {
+    return SPACE_PASS_INDICES["ci_wo_template"];
+  }
+  
+  // 3. 次浴與客浴：只要是客浴 (ke_yu) 或次臥專屬套浴 (ci_wo_x_bath)，一律套用通用衛浴模板
+  if (spaceId === "ke_yu" || (spaceId.startsWith("ci_wo_") && spaceId.endsWith("_bath"))) {
+    return SPACE_PASS_INDICES["common_bath_template"];
+  }
+  
+  // 4. 其他空間直接查表返回
   return SPACE_PASS_INDICES[spaceId] || [];
 }
 
