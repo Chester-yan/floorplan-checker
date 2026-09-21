@@ -398,7 +398,9 @@ function isBaselineRequiredSpace(spaceId, roomType, hasPlusOne) {
 }
 
 function isBonusSpace(spaceId, roomType, hasPlusOne) {
-  if (roomType === 1 && !hasPlusOne && spaceId === "xuan_guan") return true;
+  // 修正 BUG：1房的玄關永遠當作外掛加分空間(拿 3.0 權重)，不受是否有 +1房 干擾
+  if (roomType === 1 && spaceId === "xuan_guan") return true; 
+  
   if (roomType === 2 && spaceId === "zhu_wo_bath") return true;
   const secondarySuiteBaths = ["ci_wo_1_bath", "ci_wo_2_bath", "ci_wo_3_bath"];
   if (secondarySuiteBaths.includes(spaceId)) return true;
