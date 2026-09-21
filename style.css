@@ -29,7 +29,7 @@ p.subtitle { color: var(--text-muted); font-size: 0.9rem; }
 .space-header { padding: 14px 20px; background: #f8fafc; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
 .space-title { display: flex; align-items: center; gap: 12px; font-weight: 600; font-size: 1.05rem; }
 .badge { font-size: 0.75rem; background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 999px; font-weight: 500; }
-.space-scores { display: flex;  gap: 16px;  font-size: 0.85rem;  color: var(--text-muted);  flex-wrap: wrap; /* 加入這行：防止五項分數在小螢幕上擠壓破版 */}
+.space-scores { display: flex;  gap: 16px;  font-size: 0.85rem;  color: var(--text-muted); flex-wrap: wrap; /* 加入這行：防止五項分數在小螢幕上擠壓破版 */}
 .space-scores b { color: var(--text); }
 
 .criteria-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; padding: 20px; }
