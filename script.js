@@ -4,7 +4,7 @@
 
 let radarChartInstance = null;
 
-// 各房型必備空間固定權重配置表 (加總嚴格鎖定為 100 分)
+// 各房型必備空間固定權重配置表
 const SPACE_WEIGHTS = {
   1: { ke_ting: 22, can_ting: 6, chu_fang: 12, yang_tai: 16, zhu_wo: 24, ke_yu: 20 },
   2: { xuan_guan: 7, ke_ting: 14, can_ting: 11, chu_fang: 11, yang_tai: 11, zhu_wo: 16, ke_yu: 15, ci_wo_1: 15 },
@@ -12,7 +12,7 @@ const SPACE_WEIGHTS = {
   4: { xuan_guan: 5, ke_ting: 16, can_ting: 10, chu_fang: 10, yang_tai: 10, zhu_wo: 11, zhu_wo_bath: 11, ke_yu: 9, ci_wo_1: 6, ci_wo_2: 6, ci_wo_3: 6 }
 };
 
-// 各空間專屬標準及格選項索引對應表 (已精簡，統一次臥與一般浴室)
+// 各空間專屬標準及格選項索引對應表 (動態路由版)
 const SPACE_PASS_INDICES = {
   xuan_guan: [1, 1, 0],
   ke_ting: [1, 0, 2, 0], 
@@ -22,7 +22,6 @@ const SPACE_PASS_INDICES = {
   zhu_wo: [1, 0, 1, 1, 3, 1, 0, 1, 1],
   zhu_wo_bath: [0, 1, 1, 1, 2, 0, 1, 1],
   
-  // 建立「通用次臥」與「通用次衛浴」的唯一模板
   ci_wo_template: [1, 0, 1, 1, 1, 1, 0, 0, 1],
   common_bath_template: [0, 1, 1, 1, 2, 0, 1, 0],
   
@@ -32,25 +31,26 @@ const SPACE_PASS_INDICES = {
 };
 
 function getSpacePassIndices(spaceId, roomType) {
-  // 1. 客廳：深度及格標準隨房型動態調整
   if (spaceId === "ke_ting") {
     const depthPassIdxMap = { 1: 2, 2: 4, 3: 5, 4: 6 };
     const depthIdx = depthPassIdxMap[roomType] ?? 4;
     return [1, 0, depthIdx, 0];
   }
-  
-  // 2. 次臥房：只要 ID 開頭是 ci_wo_ 且不含 bath，一律套用次臥模板
   if (spaceId.startsWith("ci_wo_") && !spaceId.includes("bath")) {
     return SPACE_PASS_INDICES["ci_wo_template"];
   }
-  
-  // 3. 次浴與客浴：只要是客浴 (ke_yu) 或次臥專屬套浴 (ci_wo_x_bath)，一律套用通用衛浴模板
   if (spaceId === "ke_yu" || (spaceId.startsWith("ci_wo_") && spaceId.endsWith("_bath"))) {
     return SPACE_PASS_INDICES["common_bath_template"];
   }
-  
-  // 4. 其他空間直接查表返回
   return SPACE_PASS_INDICES[spaceId] || [];
+}
+
+// 顏色邏輯判定函數 (紅/綠/藍/橘)
+function getScoreColor(raw, pass, std) {
+  if (raw < pass) return "#ef4444"; // 小於及格分 = 紅色
+  if (raw >= pass && raw < std - 0.01) return "#10b981"; // 大於等於及格分 且 小於滿分 = 綠色
+  if (Math.abs(raw - std) <= 0.01) return "#2563eb"; // 等於滿分 = 藍色
+  return "#f97316"; // 大於滿分 = 橘色
 }
 
 // 通用浴室選項範本
@@ -71,18 +71,7 @@ function createSecondaryBedroomCriteria() {
     { name: "連接陽台", opts: [{ l: "無連接", v: 0 }, { l: "有連接", v: 1.0 }], d: 0 },
     { name: "床邊走道數", opts: [{ l: "<一邊", v: "not ok" }, { l: "一邊", v: 0.6 }, { l: "兩邊", v: 0.8 }, { l: "三邊", v: 1.0 }], d: 2 },
     { name: "床邊走道淨寬", opts: [{ l: "<50cm", v: 0 }, { l: "≥50cm", v: 0.6 }, { l: ">60cm", v: 1.0 }, { l: ">70cm", v: 1.2 }, { l: ">80cm", v: 1.4 }, { l: ">90cm", v: 1.6 }], d: 2 },
-    { 
-      name: "衣櫃長度", 
-      opts: [
-        { l: "<105cm", v: "not ok" },
-        { l: "≥105cm", v: 0.6 },
-        { l: ">120cm", v: 0.8 },
-        { l: ">150cm", v: 1.0 },
-        { l: ">180cm", v: 1.2 },
-        { l: ">210cm", v: 1.4 }
-      ], 
-      d: 3
-    },
+    { name: "衣櫃長度", opts: [{ l: "<105cm", v: "not ok" }, { l: "≥105cm", v: 0.6 }, { l: ">120cm", v: 0.8 }, { l: ">150cm", v: 1.0 }, { l: ">180cm", v: 1.2 }, { l: ">210cm", v: 1.4 }], d: 3 },
     { name: "衣櫃深度", opts: [{ l: "<60cm", v: "not ok" }, { l: "≥60cm", v: 1.0 }, { l: ">65cm", v: 1.2 }], d: 1 },
     { name: "衣櫃前淨寬", opts: [{ l: "<60cm", v: 0 }, { l: "≥60cm", v: 1.0 }, { l: ">70cm", v: 1.2 }, { l: ">80cm", v: 1.4 }, { l: ">90cm", v: 1.6 }], d: 1 },
     { name: "是否留設梳妝台", opts: [{ l: "無", v: 0 }, { l: "有", v: 1.0 }], d: 1 },
@@ -104,21 +93,7 @@ let spaces = [
     criteria: [
       { name: "空間採光", opts: [{ l: "無採光", v: "not ok" }, { l: "間接採光", v: 0.6 }, { l: "直接採光", v: 1.0 }], d: 2 },
       { name: "連接陽台", opts: [{ l: "無連接", v: 0 }, { l: "有連接", v: 1.0 }], d: 0 },
-      { 
-        name: "客廳深度", 
-        opts: [
-          { l: "<2.7m", v: "not ok" },
-          { l: "≥2.7m", v: 0.4 },
-          { l: ">2.8m", v: 0.6 },
-          { l: ">2.9m", v: 0.8 },
-          { l: ">3m", v: 1.0 },
-          { l: ">3.2m", v: 1.2 },
-          { l: ">3.4m", v: 1.4 },
-          { l: ">3.6m", v: 1.6 },
-          { l: ">4m", v: 1.8 }
-        ], 
-        d: 4
-      },
+      { name: "客廳深度", opts: [{ l: "<2.7m", v: "not ok" }, { l: "≥2.7m", v: 0.4 }, { l: ">2.8m", v: 0.6 }, { l: ">2.9m", v: 0.8 }, { l: ">3m", v: 1.0 }, { l: ">3.2m", v: 1.2 }, { l: ">3.4m", v: 1.4 }, { l: ">3.6m", v: 1.6 }, { l: ">4m", v: 1.8 }], d: 4 },
       { name: "沙發座數", opts: [{ l: "<居住人數", v: 0.6 }, { l: "符合居住人數", v: 1.0 }], d: 1 }
     ]
   },
@@ -144,40 +119,9 @@ let spaces = [
   {
     id: "zhong_dao", name: "中島空間", enabled: false,
     criteria: [
-      { 
-        name: "檯面長度", 
-        opts: [
-          { l: "<90cm", v: "not ok" },
-          { l: "≥90cm", v: 0.6 },
-          { l: ">100cm", v: 0.8 },
-          { l: ">120cm", v: 1.0 },
-          { l: ">150cm", v: 1.2 },
-          { l: ">180cm", v: 1.4 }
-        ], 
-        d: 3
-      },
-      { 
-        name: "檯面深度", 
-        opts: [
-          { l: "<60cm", v: "not ok" },
-          { l: "≥60cm", v: 0.6 },
-          { l: ">70cm", v: 0.8 },
-          { l: ">80cm", v: 1.0 },
-          { l: ">90cm", v: 1.2 },
-          { l: ">120cm", v: 1.4 }
-        ], 
-        d: 3
-      },
-      { 
-        name: "環狀走道淨寬", 
-        opts: [
-          { l: "<70cm", v: "not ok" },
-          { l: "≥70cm", v: 0.6 },
-          { l: ">80cm", v: 1.0 },
-          { l: ">90cm", v: 1.2 }
-        ], 
-        d: 2
-      },
+      { name: "檯面長度", opts: [{ l: "<90cm", v: "not ok" }, { l: "≥90cm", v: 0.6 }, { l: ">100cm", v: 0.8 }, { l: ">120cm", v: 1.0 }, { l: ">150cm", v: 1.2 }, { l: ">180cm", v: 1.4 }], d: 3 },
+      { name: "檯面深度", opts: [{ l: "<60cm", v: "not ok" }, { l: "≥60cm", v: 0.6 }, { l: ">70cm", v: 0.8 }, { l: ">80cm", v: 1.0 }, { l: ">90cm", v: 1.2 }, { l: ">120cm", v: 1.4 }], d: 3 },
+      { name: "環狀走道淨寬", opts: [{ l: "<70cm", v: "not ok" }, { l: "≥70cm", v: 0.6 }, { l: ">80cm", v: 1.0 }, { l: ">90cm", v: 1.2 }], d: 2 },
       { name: "設置水槽", opts: [{ l: "無設置", v: 0 }, { l: "有設置", v: 1.0 }], d: 0 },
       { name: "設置IH爐", opts: [{ l: "無設置", v: 0 }, { l: "有設置", v: 1.0 }], d: 0 },
       { name: "結合餐桌", opts: [{ l: "無結合", v: 0 }, { l: "有結合", v: 1.0 }], d: 0 }
@@ -190,18 +134,7 @@ let spaces = [
       { name: "設置洗衣機", opts: [{ l: "無法設置", v: "not ok" }, { l: "可設置", v: 1.0 }], d: 1 },
       { name: "設置洗衣槽", opts: [{ l: "無法設置", v: 0.0 }, { l: "可設置", v: 1.0 }], d: 1 },
       { name: "設置曬衣架", opts: [{ l: "無法設置", v: 0 }, { l: "可設置", v: 1.0 }], d: 1 },
-      { 
-        name: "坪數大小", 
-        opts: [
-          { l: "<0.7坪", v: "not ok" },
-          { l: "≥0.7坪", v: 0.4 },
-          { l: ">0.8坪", v: 0.6 },
-          { l: ">1坪", v: 0.8 },
-          { l: ">1.2坪", v: 1.0 },
-          { l: ">1.4坪", v: 1.2 }
-        ], 
-        d: 4
-      }
+      { name: "坪數大小", opts: [{ l: "<0.7坪", v: "not ok" }, { l: "≥0.7坪", v: 0.4 }, { l: ">0.8坪", v: 0.6 }, { l: ">1坪", v: 0.8 }, { l: ">1.2坪", v: 1.0 }, { l: ">1.4坪", v: 1.2 }], d: 4 }
     ]
   },
   {
@@ -211,53 +144,18 @@ let spaces = [
       { name: "連接陽台", opts: [{ l: "無連接", v: 0 }, { l: "有連接", v: 1.0 }], d: 0 },
       { name: "床邊留設走道數", opts: [{ l: "<兩邊", v: "not ok" }, { l: "≥兩邊", v: 0.4 }, { l: ">三邊", v: 1.0 }], d: 2 },
       { name: "床邊走道平均淨寬", opts: [{ l: "<50cm", v: 0 }, { l: "≥50cm", v: 0.6 }, { l: ">60cm", v: 1.0 }, { l: ">70cm", v: 1.2 }, { l: ">80cm", v: 1.4 }, { l: ">90cm", v: 1.6 }], d: 2 },
-      { 
-        name: "衣櫃長度", 
-        opts: [
-          { l: "<105cm", v: "not ok" },
-          { l: "≥105cm", v: 0.2 },
-          { l: ">120cm", v: 0.4 },
-          { l: ">150cm", v: 0.6 },
-          { l: ">180cm", v: 0.8 },
-          { l: ">210cm", v: 1.0 },
-          { l: ">245cm", v: 1.2 },
-          { l: ">300cm", v: 1.4 }
-        ], 
-        d: 5
-      },
+      { name: "衣櫃長度", opts: [{ l: "<105cm", v: "not ok" }, { l: "≥105cm", v: 0.2 }, { l: ">120cm", v: 0.4 }, { l: ">150cm", v: 0.6 }, { l: ">180cm", v: 0.8 }, { l: ">210cm", v: 1.0 }, { l: ">245cm", v: 1.2 }, { l: ">300cm", v: 1.4 }], d: 5 },
       { name: "衣櫃深度", opts: [{ l: "<60cm", v: "not ok" }, { l: "≥60cm", v: 1.0 }, { l: ">65cm", v: 1.2 }], d: 1 },
       { name: "衣櫃前淨寬", opts: [{ l: "<60cm", v: 0 }, { l: "≥60cm", v: 1.0 }, { l: ">70cm", v: 1.2 }, { l: ">80cm", v: 1.4 }, { l: ">90cm", v: 1.6 }], d: 1 },
       { name: "是否留設梳妝台", opts: [{ l: "無", v: 0 }, { l: "有", v: 1.0 }], d: 1 },
       { name: "床具尺寸", opts: [{ l: "<5x6.2尺", v: "not ok" }, { l: "≥5x6.2尺", v: 0.6 }, { l: ">6x6.2尺", v: 1.0 }, { l: ">6x7尺", v: 1.2 }], d: 2 }
     ]
   },
-
   {
     id: "geng_yi_jian", name: "更衣間", enabled: false,
     criteria: [
-      { 
-        name: "衣櫃長度", 
-        opts: [
-          { l: "<150cm", v: "not ok" },
-          { l: "≥150cm", v: 0.6 },
-          { l: ">180cm", v: 0.8 },
-          { l: ">210cm", v: 1.0 },
-          { l: ">240cm", v: 1.2 },
-          { l: ">300cm", v: 1.4 }
-        ], 
-        d: 3
-      },
-      { 
-        name: "走道淨寬", 
-        opts: [
-          { l: "<70cm", v: "not ok" },
-          { l: "≥70cm", v: 0.6 },
-          { l: ">80cm", v: 0.8 },
-          { l: ">90cm", v: 1.0 },
-          { l: ">100cm", v: 1.2 }
-        ], 
-        d: 3
-      },
+      { name: "衣櫃長度", opts: [{ l: "<150cm", v: "not ok" }, { l: "≥150cm", v: 0.6 }, { l: ">180cm", v: 0.8 }, { l: ">210cm", v: 1.0 }, { l: ">240cm", v: 1.2 }, { l: ">300cm", v: 1.4 }], d: 3 },
+      { name: "走道淨寬", opts: [{ l: "<70cm", v: "not ok" }, { l: "≥70cm", v: 0.6 }, { l: ">80cm", v: 0.8 }, { l: ">90cm", v: 1.0 }, { l: ">100cm", v: 1.2 }], d: 3 },
       { name: "精品中島櫃", opts: [{ l: "無設置", v: 0 }, { l: "有設置", v: 1.0 }], d: 0 },
       { name: "梳妝台", opts: [{ l: "無設置", v: 0 }, { l: "有設置", v: 1.0 }], d: 0 }
     ]
@@ -377,6 +275,7 @@ function renderSpaces() {
 
     const badgeHtml = sp.isSuiteBath ? `<span class="badge" style="font-size:0.75rem; background:#e0f2fe; color:#0369a1; padding:2px 8px; border-radius:999px;">專屬套浴</span>` : "";
 
+    // ★ 更新空間卡標題：加入五項分數顯示
     card.innerHTML = `
       <div class="space-header">
         <div class="space-title">
@@ -386,11 +285,12 @@ function renderSpaces() {
           </label>
           ${badgeHtml}
         </div>
-        <div class="space-scores">
+        <div class="space-scores" style="gap: 12px; font-size: 0.85rem;">
           <span>低標: <b id="low_${sp.id}">0.00</b></span>
-          <span>滿分: <b id="std_${sp.id}" style="color:#0369a1">0.00</b></span>
+          <span>及格: <b id="pass_${sp.id}">0.00</b></span>
+          <span>滿分: <b id="std_${sp.id}">0.00</b></span>
           <span>高標: <b id="high_${sp.id}">0.00</b></span>
-          <span>實得: <b id="raw_${sp.id}" style="color:var(--primary)">0.00</b></span>
+          <span style="font-weight: 700; color: #1e293b;">實得: <b id="raw_${sp.id}">0.00</b></span>
         </div>
       </div>
       <div class="criteria-grid">${criteriaHtml}</div>
@@ -508,14 +408,13 @@ function isBonusSpace(spaceId, roomType, hasPlusOne) {
   return false;
 }
 
-// 加分空間配分權重 (使得各加分空間每個項目的 B 值固定為 1.0)
 function getBonusMaxScore(spaceId) {
-  if (spaceId === "xuan_guan") return 3.0; // 3個項目
-  if (spaceId === "zhu_wo_bath") return 8.0; // 8個項目
+  if (spaceId === "xuan_guan") return 3.0; 
+  if (spaceId === "zhu_wo_bath") return 8.0; 
   if (["ci_wo_1_bath", "ci_wo_2_bath", "ci_wo_3_bath"].includes(spaceId)) return 8.0;
-  if (spaceId === "zhong_dao") return 6.0; // 6個項目
-  if (spaceId === "geng_yi_jian") return 4.0; // 4個項目
-  if (spaceId === "plus_one") return 4.0; // 4個項目
+  if (spaceId === "zhong_dao") return 6.0; 
+  if (spaceId === "geng_yi_jian") return 4.0; 
+  if (spaceId === "plus_one") return 4.0; 
   return 0.0;
 }
 
@@ -523,11 +422,9 @@ function calculateAll() {
   const { roomType, hasPlusOne } = getCurrentLayoutState();
   const currentWeights = SPACE_WEIGHTS[roomType] || SPACE_WEIGHTS[2];
 
-  let totalBaseScore = 0.0;
-  let totalBonusScore = 0.0;
   let rawSum = 0.0;
-  let totalLowSum = 0.0;   
-  let totalHighSum = 0.0;  
+  let totalPassSum = 0.0;   
+  let totalStdSum = 0.0;  
 
   spaces.forEach((sp, spIdx) => {
     const isBonus = isBonusSpace(sp.id, roomType, hasPlusOne);
@@ -548,7 +445,6 @@ function calculateAll() {
       const minV = validScores.length ? Math.min(...validScores) : 0;
       const maxV = validScores.length ? Math.max(...validScores) : 0;
 
-      // 抓取真實的及格選項係數 (v)
       const pIdx = passIndices[critIdx] ?? 0;
       const passV = typeof crit.opts[pIdx]?.v === 'number' ? crit.opts[pIdx].v : 0;
 
@@ -584,7 +480,7 @@ function calculateAll() {
 
     // 3. 矩陣相乘 (係數 × 基底分)
     const spLow = sumMinV * itemBaseValue;
-    const spPass = sumPassV * itemBaseValue; // 真實選項係數及格分
+    const spPass = sumPassV * itemBaseValue; 
     const spStd = sumStdV * itemBaseValue;
     const spHigh = sumHighV * itemBaseValue;
     const spRaw = sumRawV * itemBaseValue;
@@ -612,53 +508,47 @@ function calculateAll() {
     sp.passPercent = passPercent;
 
     if (sp.enabled && sp.userActive !== false) {
-      totalLowSum += spLow;
-      totalHighSum += spHigh;
+      totalPassSum += spPass;
+      totalStdSum += spStd;
       rawSum += spRaw;
-
-      // 無論一般或加分空間，實得分數即為總分唯一依據
-      if (isBonus) {
-        totalBonusScore += spRaw;
-      } else {
-        totalBaseScore += spRaw;
-      }
     }
 
+    // 填入 5 項分數
     const elLow = document.getElementById(`low_${sp.id}`);
+    const elPass = document.getElementById(`pass_${sp.id}`);
     const elStd = document.getElementById(`std_${sp.id}`);
     const elHigh = document.getElementById(`high_${sp.id}`);
     const elRaw = document.getElementById(`raw_${sp.id}`);
-    if (elLow) elLow.innerText = spPass.toFixed(2);
+    
+    if (elLow) elLow.innerText = spLow.toFixed(2);
+    if (elPass) elPass.innerText = spPass.toFixed(2);
     if (elStd) elStd.innerText = spStd.toFixed(2);
     if (elHigh) elHigh.innerText = spHigh.toFixed(2);
-    if (elRaw) elRaw.innerText = (sp.enabled && sp.userActive !== false ? spRaw : 0).toFixed(2);
-  });
-
-  const dispLowSum = document.getElementById("dispLowSum");
-  const dispHighSum = document.getElementById("dispHighSum");
-  const dispRaw = document.getElementById("dispRaw");
-  
-  // 底部及格總分顯示
-  let totalPassSum = 0;
-  spaces.forEach(sp => {
-      if (sp.enabled && sp.userActive !== false) {
-          totalPassSum += sp.spPass;
+    
+    // ★ 更新空間卡實得顏色
+    if (elRaw) {
+      const displayRaw = sp.enabled && sp.userActive !== false ? spRaw : 0;
+      elRaw.innerText = displayRaw.toFixed(2);
+      if (sp.enabled && sp.userActive !== false && !hasNotOk) {
+        elRaw.style.color = getScoreColor(displayRaw, spPass, spStd);
+      } else {
+        elRaw.style.color = "#ef4444"; // 含有不合格項目直接紅字
       }
+    }
   });
-  
-  if (dispLowSum) dispLowSum.innerText = totalPassSum.toFixed(1);
-  if (dispHighSum) dispHighSum.innerText = totalHighSum.toFixed(1);
-  if (dispRaw) dispRaw.innerText = rawSum.toFixed(1);
 
-  const finalScore = totalBaseScore + totalBonusScore;
-  const finalEl = document.getElementById("dispFinal");
-  if (finalEl) {
-    finalEl.innerText = finalScore.toFixed(1);
-    finalEl.style.color = finalScore > 100 
-      ? "#b45309" 
-      : finalScore >= totalPassSum
-      ? "var(--primary)" 
-      : "var(--danger)";
+  // 底部總分顯示更新
+  const dispPassSum = document.getElementById("dispPassSum");
+  const dispStdSum = document.getElementById("dispStdSum");
+  const dispFinal = document.getElementById("dispFinal");
+  
+  if (dispPassSum) dispPassSum.innerText = totalPassSum.toFixed(1);
+  if (dispStdSum) dispStdSum.innerText = totalStdSum.toFixed(1);
+
+  if (dispFinal) {
+    dispFinal.innerText = rawSum.toFixed(1);
+    // ★ 更新全案實得顏色
+    dispFinal.style.color = getScoreColor(rawSum, totalPassSum, totalStdSum);
   }
 
   updateRadarChart();
@@ -705,9 +595,6 @@ function togglePlusOne(checked) {
   updateSpecTitle();
 }
 
-/**
- * 一鍵套用分數預設功能
- */
 function applyExtremePreset(mode) {
   const { roomType } = getCurrentLayoutState();
 
@@ -848,16 +735,12 @@ function updateRadarChart() {
 
   const labels = chartSpaces.map(sp => sp.name);
 
-  // 藍線：真實得分百分比
   const dataValues = chartSpaces.map(sp => {
     if (sp.userActive === false || sp.hasNotOk) return 0;
     return Math.round(sp.radarPercent || 0);
   });
 
-  // 綠線：標準滿分永遠是 100%
   const highThresholdData = new Array(labels.length).fill(100);
-
-  // 紅線：抓取每個空間的「真實及格百分比」畫出多邊形
   const lowThresholdData = chartSpaces.map(sp => Math.round(sp.passPercent || 0));
 
   const maxVal = Math.max(...dataValues, 100);
@@ -878,7 +761,7 @@ function updateRadarChart() {
       label: "標準滿分線 (100%)",
       data: highThresholdData,
       backgroundColor: "transparent",
-      borderColor: "rgba(22, 163, 74, 0.8)",
+      borderColor: "rgba(37, 99, 235, 0.6)", // 藍色標準線
       borderWidth: 2,
       borderDash: [5, 5],
       pointRadius: 0,
@@ -945,11 +828,10 @@ function updateRadarChart() {
 }
 
 function exportReportPDF() {
-  const low = document.getElementById("dispLowSum")?.innerText || "0.0";
-  const high = document.getElementById("dispHighSum")?.innerText || "0.0";
-  const raw = document.getElementById("dispRaw")?.innerText || "0.0";
+  const pass = document.getElementById("dispPassSum")?.innerText || "0.0";
+  const std = document.getElementById("dispStdSum")?.innerText || "0.0";
   const finalEl = document.getElementById("dispFinal");
-  const final = finalEl ? finalEl.innerText : "60.0";
+  const final = finalEl ? finalEl.innerText : "0.0";
   const finalColor = finalEl ? window.getComputedStyle(finalEl).color : "#1e3a8a";
 
   const projectName = getIptVal("iptProjectName", "未指定建案");
@@ -980,21 +862,17 @@ function exportReportPDF() {
       <div style="font-size: 0.95rem; font-weight: 600; color: #334155;">房型：${roomSpec}</div>
       <div style="font-size: 0.8rem; color: #64748b; margin-top: 4px;">產出時間：${dateStr}</div>
     </div>
-    <div style="display: flex; gap: 24px; align-items: center;">
+    <div style="display: flex; gap: 32px; align-items: center;">
       <div style="display: flex; flex-direction: column; text-align: left;">
-        <span style="font-size: 0.78rem; color: #64748b; margin-bottom: 2px;">低標及格線</span>
-        <span style="font-size: 1.25rem; font-weight: 700; color: #1e293b;">${low}</span>
+        <span style="font-size: 0.78rem; color: #64748b; margin-bottom: 2px;">及格底線總和</span>
+        <span style="font-size: 1.25rem; font-weight: 700; color: #1e293b;">${pass}</span>
       </div>
       <div style="display: flex; flex-direction: column; text-align: left;">
-        <span style="font-size: 0.78rem; color: #64748b; margin-bottom: 2px;">頂規高標線</span>
-        <span style="font-size: 1.25rem; font-weight: 700; color: #1e293b;">${high}</span>
+        <span style="font-size: 0.78rem; color: #64748b; margin-bottom: 2px;">標準滿分總和</span>
+        <span style="font-size: 1.25rem; font-weight: 700; color: #2563eb;">${std}</span>
       </div>
       <div style="display: flex; flex-direction: column; text-align: left;">
-        <span style="font-size: 0.78rem; color: #64748b; margin-bottom: 2px;">累計實得點數</span>
-        <span style="font-size: 1.25rem; font-weight: 700; color: #1e293b;">${raw}</span>
-      </div>
-      <div style="display: flex; flex-direction: column; text-align: left;">
-        <span style="font-size: 0.78rem; color: #64748b; margin-bottom: 2px;">轉換百分制分數</span>
+        <span style="font-size: 0.78rem; color: #64748b; margin-bottom: 2px;">本案評估總分</span>
         <div style="display: flex; align-items: baseline; gap: 4px;">
           <span style="font-size: 2rem; font-weight: 800; color: ${finalColor}; line-height: 1;">${final}</span>
           <span style="font-size: 0.9rem; color: #64748b; font-weight: 600;">分</span>
