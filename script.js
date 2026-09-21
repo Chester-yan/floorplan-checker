@@ -12,29 +12,30 @@ const SPACE_WEIGHTS = {
   4: { xuan_guan: 5, ke_ting: 16, can_ting: 10, chu_fang: 10, yang_tai: 10, zhu_wo: 11, zhu_wo_bath: 11, ke_yu: 9, ci_wo_1: 6, ci_wo_2: 6, ci_wo_3: 6 }
 };
 
-// 各空間專屬標準及格選項索引對應表
+// 各空間專屬標準及格選項索引對應表 (已依據截圖全面更新)
 const SPACE_PASS_INDICES = {
   xuan_guan: [1, 1, 0],
-  ke_ting: [1, 0, 2, 0],
+  ke_ting: [1, 0, 2, 0], 
   can_ting: [0, 1, 1],
-  chu_fang: [1, 0, 1, 0, 0, 0],
-  yang_tai: [0, 1, 0, 0, 1],
-  zhu_wo: [2, 0, 2, 2, 5, 1, 1, 1, 2],
-  ci_wo_1: [1, 0, 2, 2, 3, 1, 1, 1, 1],
-  ci_wo_2: [1, 0, 2, 2, 3, 1, 1, 1, 1],
-  ci_wo_3: [1, 0, 2, 2, 3, 1, 1, 1, 1],
-  zhu_wo_bath: [0, 1, 1, 1, 2, 0, 0, 0],
-  ci_wo_1_bath: [0, 1, 1, 1, 2, 0, 0, 0],
-  ci_wo_2_bath: [0, 1, 1, 1, 2, 0, 0, 0],
-  ci_wo_3_bath: [0, 1, 1, 1, 2, 0, 0, 0],
-  ke_yu: [0, 1, 1, 1, 2, 0, 1, 1],
-  zhong_dao: [3, 3, 2, 1, 1, 0],
-  geng_yi_jian: [2, 1, 0, 0], 
-  plus_one: [0, 1, 1, 1]
+  chu_fang: [1, 1, 1, 0, 0, 0],
+  yang_tai: [0, 1, 0, 1, 2],
+  zhu_wo: [1, 0, 1, 1, 3, 1, 0, 1, 1],
+  ci_wo_1: [1, 0, 1, 1, 1, 1, 0, 0, 1],
+  ci_wo_2: [1, 0, 1, 1, 1, 1, 0, 0, 1],
+  ci_wo_3: [1, 0, 1, 1, 1, 1, 0, 0, 1],
+  zhu_wo_bath: [0, 1, 1, 1, 2, 0, 1, 1],
+  ci_wo_1_bath: [0, 1, 1, 1, 2, 0, 1, 0],
+  ci_wo_2_bath: [0, 1, 1, 1, 2, 0, 1, 0],
+  ci_wo_3_bath: [0, 1, 1, 1, 2, 0, 1, 0],
+  ke_yu: [0, 1, 1, 1, 2, 0, 1, 0],
+  zhong_dao: [1, 1, 1, 0, 0, 0],
+  geng_yi_jian: [1, 1, 0, 0], 
+  plus_one: [1, 1, 0, 0]
 };
 
 function getSpacePassIndices(spaceId, roomType) {
   if (spaceId === "ke_ting") {
+    // 客廳深度及格標準隨房型動態調整
     const depthPassIdxMap = { 1: 2, 2: 4, 3: 5, 4: 6 };
     const depthIdx = depthPassIdxMap[roomType] ?? 4;
     return [1, 0, depthIdx, 0];
@@ -473,7 +474,7 @@ function updateLayoutConfig() {
 }
 
 // ----------------------------------------------------
-// 核心計算區 (全面落實 矩陣相乘 與 真實百分比)
+// 核心計算區 (全面落實 矩陣相乘)
 // ----------------------------------------------------
 
 function isBaselineRequiredSpace(spaceId, roomType, hasPlusOne) {
@@ -497,7 +498,7 @@ function isBonusSpace(spaceId, roomType, hasPlusOne) {
   return false;
 }
 
-// 加分空間依據檢核項目數量設定配分權重 (使得每個項目的 B 值為 1.0)
+// 加分空間配分權重 (使得各加分空間每個項目的 B 值固定為 1.0)
 function getBonusMaxScore(spaceId) {
   if (spaceId === "xuan_guan") return 3.0; // 3個項目
   if (spaceId === "zhu_wo_bath") return 8.0; // 8個項目
@@ -537,7 +538,7 @@ function calculateAll() {
       const minV = validScores.length ? Math.min(...validScores) : 0;
       const maxV = validScores.length ? Math.max(...validScores) : 0;
 
-      // 算法1：抓取真實的及格選項係數 (v)
+      // 抓取真實的及格選項係數 (v)
       const pIdx = passIndices[critIdx] ?? 0;
       const passV = typeof crit.opts[pIdx]?.v === 'number' ? crit.opts[pIdx].v : 0;
 
@@ -585,17 +586,15 @@ function calculateAll() {
     sp.spRaw = spRaw;
     sp.hasNotOk = hasNotOk;
 
-    // 4. 雷達圖資料點映射 (純淨百分比轉換)
+    // 4. 雷達圖資料點映射 (無上限百分比)
     let radarPercent = 0;
     let passPercent = 0;
     if (sumStdV > 0) {
       if (hasNotOk || sumRawV === 0) {
         radarPercent = 0;
       } else {
-        // 實得分數 / 標準分數 (無上限向外延伸)
         radarPercent = (sumRawV / sumStdV) * 100;
       }
-      // 及格分數 / 標準分數 (真實及格紅線落點)
       passPercent = (sumPassV / sumStdV) * 100;
     }
 
@@ -619,7 +618,7 @@ function calculateAll() {
     const elStd = document.getElementById(`std_${sp.id}`);
     const elHigh = document.getElementById(`high_${sp.id}`);
     const elRaw = document.getElementById(`raw_${sp.id}`);
-    if (elLow) elLow.innerText = spPass.toFixed(2); // 低標顯示及格分
+    if (elLow) elLow.innerText = spPass.toFixed(2);
     if (elStd) elStd.innerText = spStd.toFixed(2);
     if (elHigh) elHigh.innerText = spHigh.toFixed(2);
     if (elRaw) elRaw.innerText = (sp.enabled && sp.userActive !== false ? spRaw : 0).toFixed(2);
@@ -629,7 +628,7 @@ function calculateAll() {
   const dispHighSum = document.getElementById("dispHighSum");
   const dispRaw = document.getElementById("dispRaw");
   
-  // 底部總分顯示
+  // 底部及格總分顯示
   let totalPassSum = 0;
   spaces.forEach(sp => {
       if (sp.enabled && sp.userActive !== false) {
@@ -647,7 +646,7 @@ function calculateAll() {
     finalEl.innerText = finalScore.toFixed(1);
     finalEl.style.color = finalScore > 100 
       ? "#b45309" 
-      : finalScore >= totalPassSum // 大於等於真實及格總分即為綠/藍色
+      : finalScore >= totalPassSum
       ? "var(--primary)" 
       : "var(--danger)";
   }
@@ -877,7 +876,7 @@ function updateRadarChart() {
       order: 2
     },
     {
-      label: "及格底線 (各空間動態標準)", // 標籤修改，體現紅線的不規則性
+      label: "及格底線 (各空間動態標準)", 
       data: lowThresholdData,
       backgroundColor: "transparent",
       borderColor: "rgba(220, 38, 38, 0.7)",
