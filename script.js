@@ -852,15 +852,15 @@ function exportReportPDF() {
     </div>
     <div style="display: flex; gap: 32px; align-items: center;">
       <div style="display: flex; flex-direction: column; text-align: left;">
-        <span style="font-size: 0.78rem; color: #64748b; margin-bottom: 2px;">及格底線總和</span>
-        <span style="font-size: 1.25rem; font-weight: 700; color: #1e293b;">${pass}</span>
+        <span style="font-size: 0.78rem; color: #64748b; margin-bottom: 2px;">及格分</span>
+        <span style="font-size: 1.25rem; font-weight: 700; color: #10b981;">${pass}</span>
       </div>
       <div style="display: flex; flex-direction: column; text-align: left;">
-        <span style="font-size: 0.78rem; color: #64748b; margin-bottom: 2px;">標準滿分總和</span>
+        <span style="font-size: 0.78rem; color: #64748b; margin-bottom: 2px;">滿分</span>
         <span style="font-size: 1.25rem; font-weight: 700; color: #2563eb;">${std}</span>
       </div>
       <div style="display: flex; flex-direction: column; text-align: left;">
-        <span style="font-size: 0.78rem; color: #64748b; margin-bottom: 2px;">本案評估總分</span>
+        <span style="font-size: 0.78rem; color: #64748b; margin-bottom: 2px;">實得總分</span>
         <div style="display: flex; align-items: baseline; gap: 4px;">
           <span style="font-size: 2rem; font-weight: 800; color: ${finalColor}; line-height: 1;">${final}</span>
           <span style="font-size: 0.9rem; color: #64748b; font-weight: 600;">分</span>
