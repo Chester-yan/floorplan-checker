@@ -137,14 +137,17 @@ let spaces = [
       { name: "坪數大小", opts: [{ l: "<0.7坪", v: "not ok" }, { l: "≥0.7坪", v: 0.4 }, { l: ">0.8坪", v: 0.6 }, { l: ">1坪", v: 0.8 }, { l: ">1.2坪", v: 1.0 }, { l: ">1.4坪", v: 1.2 }], d: 4 }
     ]
   },
-  {
+{
     id: "zhu_wo", name: "主臥房", enabled: true,
     criteria: [
       { name: "空間採光", opts: [{ l: "無採光", v: "not ok" }, { l: "間接採光", v: 0.6 }, { l: "直接採光", v: 1.0 }], d: 2 },
       { name: "連接陽台", opts: [{ l: "無連接", v: 0 }, { l: "有連接", v: 1.0 }], d: 0 },
       { name: "床邊留設走道數", opts: [{ l: "<兩邊", v: "not ok" }, { l: "≥兩邊", v: 0.4 }, { l: ">三邊", v: 1.0 }], d: 2 },
       { name: "床邊走道平均淨寬", opts: [{ l: "<50cm", v: 0 }, { l: "≥50cm", v: 0.6 }, { l: ">60cm", v: 1.0 }, { l: ">70cm", v: 1.2 }, { l: ">80cm", v: 1.4 }, { l: ">90cm", v: 1.6 }], d: 2 },
-      { name: "衣櫃長度", opts: [{ l: "<105cm", v: "not ok" }, { l: "≥105cm", v: 0.2 }, { l: ">120cm", v: 0.4 }, { l: ">150cm", v: 0.6 }, { l: ">180cm", v: 0.8 }, { l: ">210cm", v: 1.0 }, { l: ">245cm", v: 1.2 }, { l: ">300cm", v: 1.4 }], d: 5 },
+      
+      // ★ 替換這一行：在最後面加入「另設更衣間」選項
+      { name: "衣櫃長度", opts: [{ l: "<105cm", v: "not ok" }, { l: "≥105cm", v: 0.2 }, { l: ">120cm", v: 0.4 }, { l: ">150cm", v: 0.6 }, { l: ">180cm", v: 0.8 }, { l: ">210cm", v: 1.0 }, { l: ">245cm", v: 1.2 }, { l: ">300cm", v: 1.4 }, { l: "另設更衣間", v: 1.0 }], d: 5 },
+      
       { name: "衣櫃深度", opts: [{ l: "<60cm", v: "not ok" }, { l: "≥60cm", v: 1.0 }, { l: ">65cm", v: 1.2 }], d: 1 },
       { name: "衣櫃前淨寬", opts: [{ l: "<60cm", v: 0 }, { l: "≥60cm", v: 1.0 }, { l: ">70cm", v: 1.2 }, { l: ">80cm", v: 1.4 }, { l: ">90cm", v: 1.6 }], d: 1 },
       { name: "是否留設梳妝台", opts: [{ l: "無", v: 0 }, { l: "有", v: 1.0 }], d: 1 },
@@ -308,6 +311,7 @@ function onCritChange(spIdx, critIdx, el) {
   crit.d = parseInt(el.value);
   el.classList.toggle("not-ok", crit.opts[crit.d]?.v === "not ok");
 
+  // 現有邏輯：衛浴套件數連動浴缸
   if (crit.name === "套件數") {
     const isFourPiece = crit.opts[crit.d]?.l === "四件式";
     const tubIdx = sp.criteria.findIndex(c => c.name === "浴缸尺寸");
@@ -321,6 +325,16 @@ function onCritChange(spIdx, critIdx, el) {
       }
     }
     syncTriangleState(sp);
+  }
+
+  // ★ 新增：主臥衣櫃雙向連動更衣間
+  if (sp.id === "zhu_wo" && crit.name === "衣櫃長度") {
+    const isGengYiJianSelected = (crit.opts[crit.d]?.l === "另設更衣間");
+    const chkGengYiJian = document.getElementById("chkBonusGengYiJian");
+    if (chkGengYiJian && chkGengYiJian.checked !== isGengYiJianSelected) {
+      chkGengYiJian.checked = isGengYiJianSelected; // 改變上方 checkbox 狀態
+      toggleBonusSpace("geng_yi_jian", isGengYiJianSelected); // 觸發更衣間卡片的顯示/隱藏
+    }
   }
 
   calculateAll();
@@ -348,6 +362,22 @@ function toggleBonusSpace(spaceId, isChecked) {
     const card = document.getElementById(`card_${spaceId}`);
     if (card) card.classList.toggle("hidden", !isChecked);
   }
+
+  // ★ 新增：如果勾選「更衣間」，自動將主臥房衣櫃長度切換為「另設更衣間」
+  if (spaceId === "geng_yi_jian" && isChecked) {
+    const zhuWo = spaces.find(s => s.id === "zhu_wo");
+    if (zhuWo) {
+      const wardrobeIdx = zhuWo.criteria.findIndex(c => c.name === "衣櫃長度");
+      if (wardrobeIdx !== -1) {
+        const targetOptIdx = zhuWo.criteria[wardrobeIdx].opts.findIndex(o => o.l === "另設更衣間");
+        if (targetOptIdx !== -1) {
+          zhuWo.criteria[wardrobeIdx].d = targetOptIdx; // 更新底層資料
+          syncSelectUI("zhu_wo", wardrobeIdx, targetOptIdx); // 同步更新 UI 下拉選單
+        }
+      }
+    }
+  }
+
   calculateAll();
 }
 
