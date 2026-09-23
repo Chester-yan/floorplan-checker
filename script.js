@@ -1048,6 +1048,17 @@ function confirmImportFromAI() {
       if (chk) chk.checked = !!data.hasBonusXuanGuan;
     }
 
+    // ★ 新增這一段：匯入時自動還原更衣間勾選狀態
+    const chkGengYiJian = document.getElementById("chkBonusGengYiJian");
+    if (chkGengYiJian) {
+      if (data.hasBonusGengYiJian !== undefined) {
+        chkGengYiJian.checked = !!data.hasBonusGengYiJian;
+      } else if (data.disabledSpaces && !data.disabledSpaces.includes("geng_yi_jian")) {
+        // ★ 相容舊版 JSON：如果代碼中沒有被列在 disabledSpaces，代表當初是有啟用更衣間的
+        chkGengYiJian.checked = true;
+      }
+    }
+
     if (data.conclusion !== undefined) {
       const el = document.getElementById("iptConclusion");
       if (el) el.value = data.conclusion;
@@ -1114,6 +1125,8 @@ function exportCurrentJSON() {
     const { roomType, hasPlusOne, suiteCount } = getCurrentLayoutState();
     const chkBonusZD = document.getElementById("chkBonusZhongDao");
     const chkBonusXG = document.getElementById("chkBonusXuanGuan");
+    const chkBonusGYJ = document.getElementById("chkBonusGengYiJian"); 
+    
     const selections = {};
     spaces.forEach(sp => { selections[sp.id] = sp.criteria.map(c => c.d); });
 
@@ -1125,6 +1138,7 @@ function exportCurrentJSON() {
       suiteCount: suiteCount,
       hasBonusZhongDao: chkBonusZD ? chkBonusZD.checked : false,
       hasBonusXuanGuan: chkBonusXG ? chkBonusXG.checked : false,
+      hasBonusGengYiJian: chkBonusGYJ ? chkBonusGYJ.checked : false, 
       disabledSpaces: spaces.filter(sp => sp.userActive === false).map(sp => sp.id),
       conclusion: getIptVal("iptConclusion"),
       selections: selections
