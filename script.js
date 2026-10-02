@@ -474,7 +474,25 @@ function updateLayoutConfig() {
   setEnable("ci_wo_2_bath", roomType >= 3 && suiteCount >= 3);
   setEnable("ci_wo_3_bath", roomType >= 4 && suiteCount >= 4);
 
+  // === ★ 修正核心：+1房雙向連動與 UI 狀態同步 ===
   setEnable("plus_one", hasPlusOne);
+  
+  const spPlusOne = spaces.find(s => s.id === "plus_one");
+  if (spPlusOne) {
+    spPlusOne.userActive = hasPlusOne; // 同步資料層的啟用狀態
+    
+    // 勾選/取消勾選卡片標題的 Checkbox (對應 index.html 裡的 toggle_plus_one)
+    const chkCardPlusOne = document.getElementById("toggle_plus_one"); 
+    if (chkCardPlusOne) chkCardPlusOne.checked = hasPlusOne;
+    
+    // 處理卡片的停用灰階樣式，並鎖定/解鎖內部下拉選單
+    const cardEl = document.getElementById("card_plus_one");
+    if (cardEl) {
+      cardEl.classList.toggle("is-disabled", !hasPlusOne);
+      cardEl.querySelectorAll("select.crit-select").forEach(sel => sel.disabled = !hasPlusOne);
+    }
+  }
+  // ===========================================
 
   const chkBonusZD = document.getElementById("chkBonusZhongDao");
   setEnable("zhong_dao", chkBonusZD ? chkBonusZD.checked : false);
