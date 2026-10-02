@@ -520,8 +520,9 @@ function isBaselineRequiredSpace(spaceId, roomType, hasPlusOne) {
 function isBonusSpace(spaceId, roomType, hasPlusOne) {
   // 修正 BUG：1房的玄關永遠當作外掛加分空間(拿 3.0 權重)，不受是否有 +1房 干擾
   if (roomType === 1 && spaceId === "xuan_guan") return true; 
+  // ★ 修正核心：讓 1房與 2房 都能正常賦予主臥浴室 8.0 的加分權重
+  if (roomType <= 2 && spaceId === "zhu_wo_bath") return true;
   
-  if (roomType === 2 && spaceId === "zhu_wo_bath") return true;
   const secondarySuiteBaths = ["ci_wo_1_bath", "ci_wo_2_bath", "ci_wo_3_bath"];
   if (secondarySuiteBaths.includes(spaceId)) return true;
   if (spaceId === "zhong_dao") return true;
